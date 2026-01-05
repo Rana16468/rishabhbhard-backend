@@ -1,0 +1,426 @@
+
+import httpStatus  from "http-status";
+
+
+import { ProfileUpdateResponse, RequestWithFile, user_search_filed } from './auth.constant';
+import users from "../user/user.model";
+import { USER_ACCESSIBILITY, USER_ROLE } from "../user/user.constant";
+import ApiError from "../../app/error/ApiError";
+import { jwtHelpers } from "../../app/helper/jwtHelpers";
+import config from "../../app/config";
+import QueryBuilder from "../../app/builder/QueryBuilder";
+import { TUser } from "../user/user.interface";
+import { sendImageToCloudinary } from "../../utility/sendImageToCloudinary";
+
+
+const loginUserIntoDb = async (payload: {
+  email: string;
+  password: string;
+  fcm?: string;
+  uid?: string;
+}) => {
+  // Fetch user by email only
+  const user: any = await users.findOne({
+    email: payload.email,
+    isVerify: true,
+    status: USER_ACCESSIBILITY.isProgress,
+  }, {
+    password: 1,
+    email: 1,
+    role: 1,
+    uid: 1
+  });
+
+  if (!user) {
+    throw new ApiError(
+      httpStatus.NOT_FOUND,
+      `User with email "${payload.email}" not found`, ""
+    );
+  }
+
+  // Check UID mismatch for new device
+  if (payload.uid && user.uid !== payload.uid) {
+    return {
+      status: false,
+      message:
+        "It seems you are using a new device. Please provide your recovery key.",
+      recoveryKey: true,
+    };
+  }
+
+  // Update FCM token if provided
+  if (payload.fcm) {
+    await users.updateOne({ _id: user._id }, { $set: { fcm: payload.fcm } });
+  }
+
+  // Validate password
+  const isMatched = await users.isPasswordMatched(payload.password, user.password);
+  if (!isMatched) {
+    throw new ApiError(httpStatus.FORBIDDEN, "Password does not match", "");
+  }
+
+  // Generate JWT tokens
+  const jwtPayload = { id: user._id, role: user.role, email: user.email, uid: user.uid };
+  const accessToken = jwtHelpers.generateToken(
+    jwtPayload,
+    config.jwt_access_secret as string,
+    config.expires_in
+  );
+  const refreshToken = jwtHelpers.generateToken(
+    jwtPayload,
+    config.jwt_refresh_secret as string,
+    config.refresh_expires_in
+  );
+
+  return { accessToken, refreshToken };
+};
+
+
+
+
+
+
+const refreshTokenIntoDb = async (token: string) => {
+  try {
+    const decoded = jwtHelpers.verifyToken(
+      token,
+      config.jwt_refresh_secret as string,
+    );
+
+    const { id } = decoded;
+
+    const isUserExist = await users.findOne(
+      {
+        $and: [
+          { _id: id },
+          { isVerify: true },
+          { status: USER_ACCESSIBILITY.isProgress },
+          { isDelete: false },
+        ],
+      },
+      { _id: 1, isVerify: 1, email: 1 },
+    );
+
+    if (!isUserExist) {
+      throw new ApiError(httpStatus.NOT_FOUND, "User not found", "");
+    }
+    let accessToken: string | null = null;
+    if (isUserExist.isVerify) {
+      const jwtPayload = {
+        id: isUserExist.id,
+        role: isUserExist.role,
+        email: isUserExist.email,
+      };
+      accessToken = jwtHelpers.generateToken(
+        jwtPayload,
+        config.jwt_access_secret as string,
+        config.expires_in as string,
+      );
+    }
+
+    return {
+      accessToken,
+    };
+  } catch (error: any) {
+    throw new ApiError(
+      httpStatus.SERVICE_UNAVAILABLE,
+      "refresh Token generator error",
+      error,
+    );
+  }
+};
+
+const myprofileIntoDb = async (id: string) => {
+  try {
+    return await users
+      .findById(id)
+      .select("name email location photo manufacturer model updatedA ");
+  } catch (error: any) {
+    throw new ApiError(
+      httpStatus.SERVICE_UNAVAILABLE,
+      "issues by the get my profile section server  error",
+      error,
+    );
+  }
+};
+
+/**
+ * @param req
+ * @param id
+ * @returns
+ */
+const changeMyProfileIntoDb = async (
+  req: RequestWithFile,
+  id: string,
+): Promise<ProfileUpdateResponse> => {
+  try {
+    const file = req.file;
+    const { name, language, age} = req.body as {
+      name?: string;
+      language?: string;
+      age?:string;
+      
+    };
+
+    const updateData: {
+      name?: string;
+      photo?: string;
+      language?: string;
+      age?: string
+    
+    } = {};
+
+    if (name) {
+      updateData.name = name;
+    }
+    if (language) {
+      updateData.language = language;
+    }
+
+    if(age){
+      updateData.age=age
+    }
+    
+    if (file) {
+
+const username = "rishabhbhard";
+const randomNumber = Math.floor(10000 + Math.random() * 90000);
+
+
+// example output: rishabhbhard45788
+
+      const imageName=`${`${username}${randomNumber}`.trim()}`;
+       const path=file?.path?.replace(/\\/g, "/");
+        const  {secure_url}= await sendImageToCloudinary(imageName,path) 
+        updateData.photo = secure_url as string
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      throw new ApiError(
+        httpStatus.BAD_REQUEST,
+        "No data provided for update",
+        "",
+      );
+    }
+
+    const result = await users.findByIdAndUpdate(
+      id,
+      { $set: { ...updateData } },
+      {
+        new: true,
+        upsert: true,
+      },
+    );
+
+    if (!result) {
+      throw new ApiError(httpStatus.NOT_FOUND, "User not found", "");
+    }
+
+    return {
+      status: true,
+      message: "Successfully updated profile",
+    };
+  } catch (error: any) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+
+    throw new ApiError(
+      httpStatus.SERVICE_UNAVAILABLE,
+      "Profile update failed",
+      error.message,
+    );
+  }
+};
+
+
+const findByAllUsersAdminIntoDb = async (query: Record<string, unknown>) => {
+  try {
+    const allUsersdQuery = new QueryBuilder(
+      users
+        .find({ isVerify: true, isDelete: false })
+        .select(
+          "name email phoneNumber location photo recoveryKey  createdAt status",
+        ),
+      query,
+    )
+      .search(user_search_filed)
+      .filter()
+      .sort()
+      .paginate()
+      .fields();
+
+    const all_users = await allUsersdQuery.modelQuery;
+    const meta = await allUsersdQuery.countTotal();
+
+    return { meta, all_users };
+  } catch (error: any) {
+    throw new ApiError(
+      httpStatus.SERVICE_UNAVAILABLE,
+      "find By All User Admin IntoDb server unavailable",
+      error,
+    );
+  }
+};
+
+
+
+const deleteAccountIntoDb = async (id: string) => {
+  try {
+    const user = await users
+      .findOne({
+        _id: id,
+        isDelete: false,
+        isVerify: true,
+        status: USER_ACCESSIBILITY.isProgress,
+      })
+      .lean();
+
+    if (!user) {
+      throw new ApiError(httpStatus.NOT_FOUND, "User account not found.","");
+    }
+
+    if (user.role === USER_ROLE.superAdmin) {
+      throw new ApiError(httpStatus.FORBIDDEN, "Super Admin cannot be deleted.", "");
+    }
+
+
+   
+
+    return {
+      status: true,
+      message: "User account and all related data deleted successfully.",
+    };
+  } catch (error:any) {
+    
+
+    throw new ApiError(
+      httpStatus.INTERNAL_SERVER_ERROR,
+      error?.message || "Delete operation failed.", ""
+    );
+  }
+};
+
+
+
+const getUserGrowthIntoDb = async (query: { year?: string }) => {
+  try {
+    const year = query.year ? parseInt(query.year) : new Date().getFullYear();
+
+    const stats = await users.aggregate([
+      {
+        $match: {
+          createdAt: {
+            $gte: new Date(`${year}-01-01T00:00:00.000Z`),
+            $lte: new Date(`${year}-12-31T23:59:59.999Z`),
+          },
+        },
+      },
+      {
+        $group: {
+          _id: { month: { $month: "$createdAt" } },
+          count: { $sum: 1 },
+        },
+      },
+      {
+        $project: {
+          month: "$_id.month",
+          count: 1,
+          _id: 0,
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          data: { $push: { month: "$month", count: "$count" } },
+        },
+      },
+
+      {
+        $project: {
+          months: {
+            $map: {
+              input: { $range: [1, 13] },
+              as: "m",
+              in: {
+                year: year,
+                month: "$$m",
+                count: {
+                  $let: {
+                    vars: {
+                      matched: {
+                        $arrayElemAt: [
+                          {
+                            $filter: {
+                              input: "$data",
+                              as: "d",
+                              cond: { $eq: ["$$d.month", "$$m"] },
+                            },
+                          },
+                          0,
+                        ],
+                      },
+                    },
+                    in: { $ifNull: ["$$matched.count", 0] },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      { $unwind: "$months" },
+      { $replaceRoot: { newRoot: "$months" } },
+    ]);
+
+    return { monthlyStats: stats };
+  } catch (error: any) {
+    throw new ApiError(
+      httpStatus.INTERNAL_SERVER_ERROR,
+      "Failed to fetch user creation stats",
+      error,
+    );
+  }
+};
+
+const isBlockAccountIntoDb = async (id: string, payload: Partial<TUser>) => {
+  try {
+    const result = await users.findByIdAndUpdate(
+      id,
+      { status: payload.status },
+      { new: true },
+    );
+
+    if (!result) {
+      throw new ApiError(httpStatus.NOT_FOUND, "User not found", "");
+    }
+
+    return {
+      success: true,
+      message: `User successfully ${payload.status}`,
+    };
+  } catch (error: any) {
+    throw new ApiError(
+      httpStatus.SERVICE_UNAVAILABLE,
+      "Block account operation failed",
+      error,
+    );
+  }
+};
+
+
+
+const AuthServices = {
+  loginUserIntoDb,
+  refreshTokenIntoDb,
+  myprofileIntoDb,
+  changeMyProfileIntoDb,
+  findByAllUsersAdminIntoDb,
+  deleteAccountIntoDb,
+
+  getUserGrowthIntoDb,
+  isBlockAccountIntoDb,
+
+};
+
+export default AuthServices;

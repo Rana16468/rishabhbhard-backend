@@ -1,24 +1,63 @@
-import express from 'express';
-import cors from 'cors';
-import notFound from './middleware/notFound';
-import globalErrorHandelar from './middleware/globalErrorHandelar';
-import router from './router';
+import cors from "cors";
+import express from "express";
+import bodyParser from "body-parser";
+import cookieParser from "cookie-parser";
+import path from "path";
+import config from "./app/config";
+
+
+// import cron from 'node-cron';
+import router from "./router";
+import notFound from "./middleware/notFound";
+import globalErrorHandelar from "./middleware/globalErrorHandelar";
+declare global {
+  namespace Express {
+    interface Request {
+      rawBody?: Buffer;
+    }
+  }
+}
 
 const app = express();
 
-app.use(express.json());
-//middlewere
-//credentials:true
-//https://shoes-client.vercel.app
+// ======= Middlewares =======
+app.use(cookieParser());
+
+app.use(
+  bodyParser.json({
+    verify: (req: express.Request, _res, buf: Buffer) => {
+      req.rawBody = buf;
+    },
+  })
+);
+
+app.use(bodyParser.urlencoded({ extended: true }));
+
+app.use(
+  config.file_path as string,
+  express.static(path.join(__dirname, 'public')),
+);
+
+
+
+
+// ======= CORS =======
 app.use(cors());
 
-app.get('/', (req, res) => {
-  res.send({ status: true, message: 'Well Come To Navyboy Server' });
+// ======= Test Route =======
+app.get("/", (_req, res) => {
+  res.send({
+    status: true,
+    message: "Welcome to Hide and Squeaks Server. It is running!",
+  });
 });
-//username:navyboy
-//password:5aNjnODj1ecD2sSx
-app.use('/api/v1', router);
 
+
+
+// ======= API Routes =======
+app.use("/api/v1", router);
+
+// ======= 404 & Global Error Handler =======
 app.use(notFound);
 app.use(globalErrorHandelar);
 

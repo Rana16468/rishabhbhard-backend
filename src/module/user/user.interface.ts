@@ -12,17 +12,18 @@ export type TUser = {
   id: string;
   role: 'user' | 'admin' | 'superAdmin';
   name: string;
+  userUniqueId: string
   password: string;
   email: string;
   phoneNumber?: string;
   verificationCode: number;
   isVerify: boolean;
   status: 'isProgress' | 'Blocked';
+  age: string,
+
   photo?: string;
-  stripeAccountId?: string;
-  isStripeConnected?: boolean;
   fcm?:string;
-  address?:string;
+  language?:string;
   isDelete: boolean;
 };
 

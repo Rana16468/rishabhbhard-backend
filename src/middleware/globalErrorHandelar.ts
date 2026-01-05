@@ -1,40 +1,39 @@
-import { ErrorRequestHandler, NextFunction, Request, Response } from 'express';
-import { ZodError } from 'zod';
-import { TErrorSources } from '../interface/error.interface';
-import handelZodError from '../app/error/handelZodError';
-import handelValidationError from '../app/error/handelValidationError';
-import handelCastError from '../app/error/handelCastError';
+import { ErrorRequestHandler, NextFunction, Request, Response } from "express";
+import { ZodError } from "zod";
 
-
-import config from '../app/config';
-import logError from './logError';
-import ApiError from '../app/error/ApiError';
-import handelDuplicateError from '../app/error/handelDuplicateError';
+import logError from "./logError";
+import { TErrorSources } from "../interface/error.interface";
+import handelZodError from "../app/error/handelZodError";
+import handelValidationError from "../app/error/handelValidationError";
+import handelCastError from "../app/error/handelCastError";
+import handelDuplicateError from "../app/error/handelDuplicateError";
+import ApiError from "../app/error/ApiError";
+import config from "../app/config";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const globalErrorHandelar: ErrorRequestHandler = (
   err,
   req: Request,
   res: Response,
-  next: NextFunction,
+  next: NextFunction
 ) => {
   logError(err, req);
 
   let statusCode = 500;
   let message = err?.message;
-  let errorSources: TErrorSources = [{ path: '', message: '' }];
+  let errorSources: TErrorSources = [{ path: "", message: "" }];
 
   if (err instanceof ZodError) {
     const simplifiedError = handelZodError(err);
     statusCode = simplifiedError?.statusCode;
     message = simplifiedError?.message;
     errorSources = simplifiedError?.errorSources;
-  } else if (err?.name === 'ValidationError') {
+  } else if (err?.name === "ValidationError") {
     const simplifiedError = handelValidationError(err);
     statusCode = simplifiedError?.statusCode;
     message = simplifiedError?.message;
     errorSources = simplifiedError?.errorSources;
-  } else if (err?.name === 'CastError') {
+  } else if (err?.name === "CastError") {
     const simplifiedError = handelCastError(err);
     statusCode = simplifiedError?.statusCode;
     message = simplifiedError?.message;
@@ -47,20 +46,20 @@ const globalErrorHandelar: ErrorRequestHandler = (
   } else if (err instanceof ApiError) {
     statusCode = err?.statusCode;
     message = err?.message;
-    errorSources = [{ path: '', message: err?.message }];
+    errorSources = [{ path: "", message: err?.message }];
   } else if (err instanceof Error) {
     message = err?.message;
-    errorSources = [{ path: '', message: err?.message }];
+    errorSources = [{ path: "", message: err?.message }];
   }
 
   return res.status(statusCode).json({
     success: false,
     message,
     errorSources,
-    stack: config.NODE_ENV === 'development' ? err?.stack : null,
+    stack: config.NODE_ENV === "development" ? err?.stack : null,
   });
 
-  next();
+
 };
 
 export default globalErrorHandelar;

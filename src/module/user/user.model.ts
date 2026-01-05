@@ -3,26 +3,27 @@ import { Schema, model } from 'mongoose';
 import config from '../../app/config';
 import { USER_ACCESSIBILITY, USER_ROLE } from './user.constant';
 import { TUser, UserModel } from './user.interface';
+import { number, string } from 'zod';
 
 const TUserSchema = new Schema<TUser, UserModel>(
   {
-    name: { type: String, required: [false, 'user name is Required'] },
+    name: { type: String, required: [true, 'user name is Required'] },
     password: { type: String, required: [false, 'Password is Required'] },
+    userUniqueId:{ type: String, unique:true , index:true, required:[true, 'user Unique Id is required']},
     email: {
       type: String,
-      required: [false, 'Email is Required'],
+      required: [true, 'Email is Required'],
       trim: true,
       unique: true,
     },
     phoneNumber: {
       type: String,
-      required: [false, 'phone number is required'],
-      unique: true,
+      required: [false, 'phone number is required']
     },
     verificationCode: {
       type: Number,
       required: [false, 'verification Code is Required'],
-      unique: true,
+      index:true
     },
     isVerify: {
       type: Boolean,
@@ -53,18 +54,16 @@ const TUserSchema = new Schema<TUser, UserModel>(
       default: null,
     },
 
-    stripeAccountId: {
+    language: {
       type: String,
-      required: false,
+      required: [false, 'language is not required'],
+      default: null
     },
-    isStripeConnected: {
-      type: Boolean,
-      rquired: false,
-      default: false,
-    },
-    address: {
+    age: {
       type: String,
-      required: [false, 'address is not required'],
+      required:[false , 'age is not required'],
+      default: null
+
     },
     fcm: {
       type: String,

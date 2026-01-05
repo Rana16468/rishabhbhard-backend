@@ -10,7 +10,7 @@ const errorSources:TErrorSources =Object.values(err.errors).map((val:mongoose.Er
 
     return{
         path:val?.path,
-        message:val?.message,
+       message:val?.message,
         
 
     }
