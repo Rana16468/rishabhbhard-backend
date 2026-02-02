@@ -65,6 +65,7 @@ const TUserSchema = new Schema<TUser, UserModel>(
       default: null
 
     },
+ 
     fcm: {
       type: String,
       required: [false, 'fcm is not  required'],

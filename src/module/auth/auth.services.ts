@@ -10,7 +10,8 @@ import { jwtHelpers } from "../../app/helper/jwtHelpers";
 import config from "../../app/config";
 import QueryBuilder from "../../app/builder/QueryBuilder";
 import { TUser } from "../user/user.interface";
-import { sendImageToCloudinary } from "../../utility/sendImageToCloudinary";
+import { sendFileToCloudinary } from "../../utility/sendImageToCloudinary";
+
 
 
 const loginUserIntoDb = async (payload: {
@@ -191,7 +192,7 @@ const randomNumber = Math.floor(10000 + Math.random() * 90000);
 
       const imageName=`${`${username}${randomNumber}`.trim()}`;
        const path=file?.path?.replace(/\\/g, "/");
-        const  {secure_url}= await sendImageToCloudinary(imageName,path) 
+        const  {secure_url}= await sendFileToCloudinary(imageName,path) 
         updateData.photo = secure_url as string
     }
 
