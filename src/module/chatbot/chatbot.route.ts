@@ -35,7 +35,7 @@ router.post(
 router.get(
   "/history",
   auth(USER_ROLE.user),
-  validationRequest(chatbotValidation.getChatHistoryValidationSchema),
+  // validationRequest(chatbotValidation.getChatHistoryValidationSchema),
   chatBotController.getChatHistory
 );
 

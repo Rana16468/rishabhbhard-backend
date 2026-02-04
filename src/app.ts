@@ -4,12 +4,14 @@ import bodyParser from "body-parser";
 import cookieParser from "cookie-parser";
 import path from "path";
 import config from "./app/config";
-
+import cron from 'node-cron'
 
 // import cron from 'node-cron';
 import router from "./router";
 import notFound from "./middleware/notFound";
 import globalErrorHandelar from "./middleware/globalErrorHandelar";
+import auto_delete_unverified_user from "./utility/auto_delete_unverified_user";
+import catchError from "./app/error/catchError";
 declare global {
   namespace Express {
     interface Request {
@@ -48,9 +50,20 @@ app.use(cors());
 app.get("/", (_req, res) => {
   res.send({
     status: true,
-    message: "Welcome to Hide and Squeaks Server. It is running!",
+    message: "Welcome to rishabhbhard-backend Server is running",
   });
 });
+
+
+cron.schedule("*/10 * * * *", async () => {
+  try {
+     await auto_delete_unverified_user();
+    
+  } catch (error: unknown) {
+       catchError(error,'[Cron] Error in subscription expiry cron job:');
+  }
+});
+
 
 
 

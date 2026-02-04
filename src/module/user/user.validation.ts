@@ -1,56 +1,47 @@
 import { z } from 'zod';
 import { USER_ACCESSIBILITY, USER_ROLE } from './user.constant';
 
-const createUserZodSchema = z.object({
+ const createUserZodSchema = z.object({
   body: z.object({
     name: z.string({ required_error: 'User name is Required' }),
-    userUniqueId: z.string({required_error:"user unique Id is Required"}),
-    password: z.string({ required_error: 'Password is Required' }).optional(),
+
+    password: z.string({
+      required_error: 'Password is Required',
+    }),
+
     email: z
       .string({ required_error: 'Email is Required' })
-      .email('Invalid email format')
-      .refine(
-        (email) => {
-          return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-        },
-        {
-          message: 'Invalid email format',
-        },
-      ),
+      .email('Invalid email format'),
 
     phoneNumber: z
-      .string({ required_error: 'Phone number is required' })
+      .string()
       .refine(
-        (phone) => {
-          return (
-            /^(\+?\d{1,3})?[-.\s]?\(?\d{1,4}\)?[-.\s]?\d{1,10}$/.test(phone) &&
-            phone.replace(/[^0-9]/g, '').length >= 7
-          );
-        },
-        {
-          message:
-            'Invalid phone number format. Please include country code for international numbers',
-        },
-      )
-      .optional(),
+        (phone:any) =>
+          /^(\+?\d{1,3})?[-.\s]?\(?\d{1,4}\)?[-.\s]?\d{1,10}$/.test(phone),
+        { message: 'Invalid phone number format' },
+      ).optional(),
+
+    gender: z.enum(['male', 'female', 'others'], {
+      required_error: 'Gender is required',
+    }),
+
+    hobbies: z.array(z.string()).optional().default([]),
+
+    language: z.array(z.string()).optional().default([]),
+
+    age: z.string({ required_error: 'Age is required' }),
 
     role: z
-      .enum(Object.values(USER_ROLE) as [string, ...string[]], {
-        required_error: 'Role is Required',
-        invalid_type_error: 'Invalid role value',
-      })
+      .enum(Object.values(USER_ROLE) as [string, ...string[]])
       .default(USER_ROLE.user),
 
     status: z
-      .enum(Object.values(USER_ACCESSIBILITY) as [string, ...string[]], {
-        required_error: 'Status is Required',
-        invalid_type_error: 'Invalid status value',
-      })
+      .enum(Object.values(USER_ACCESSIBILITY) as [string, ...string[]])
       .default(USER_ACCESSIBILITY.isProgress),
 
-    photo: z.string({ required_error: 'photo is not required' }).optional(),
-    address: z.string({required_error:"address is not required"}).optional(),
-    fcm: z.string({ required_error: 'fcm is not required' }).optional(),
+    photo: z.string().optional(),
+
+    fcm: z.string().optional(),
   }),
 });
 

@@ -1,11 +1,15 @@
 // chatbot.services.ts - CORRECTLY FIXED WITH ACTUAL API METHODS
 
+import httpStatus from "http-status";
+import QueryBuilder from "../../app/builder/QueryBuilder";
+import ApiError from "../../app/error/ApiError";
 import { session, connectGemini,
   disconnectSession,
   getCurrentTranscript,
   handleTurn,
   resetTranscript,
   saveConversationToDb, } from "../../utility/Ai_Integation/AI_Integation";
+import ChatHistoryModel from "./chatbot.model";
 
 
 
@@ -218,7 +222,7 @@ async function sendAudioMessage(
         userId,
         "User audio message",
         aiResponse || "(Audio message - no text response)",
-        sessionId,
+    
         {
           questionCategory: "none",
           conversationTopic: "general",
@@ -306,7 +310,6 @@ async function sendTextMessage(
         userId,
         trimmedText,
         aiResponse || "(No response)",
-        sessionId,
         {
           questionCategory: "none",
           conversationTopic: "general",
@@ -448,33 +451,30 @@ async function textToTextChatIntoDb(
  * @returns Array of chat history records
  * @throws Error if user ID invalid or database error
  */
-async function getChatHistory(userId: string): Promise<any[]> {
-  if (!userId || typeof userId !== "string" || userId.trim() === "") {
-    throw new Error("Valid user ID is required");
-  }
-
+async function getChatHistory(userId: string) {
   try {
-    const ChatHistoryModel = require("../../module/chatbot/chatbot.model")
-      .default;
+  
+     const allHistoryQuery = new QueryBuilder(
+      ChatHistoryModel
+        .find({ userId }),  
+     {}
+    )
+      .search([])
+      .filter()
+      .sort()
+      .paginate()
+      .fields();
 
-    if (!ChatHistoryModel) {
-      throw new Error("ChatHistoryModel not found");
-    }
+    const history = await allHistoryQuery .modelQuery;
+    const meta = await allHistoryQuery .countTotal();
 
-    const history = await ChatHistoryModel.find({ userId })
-      .sort({ createdAt: -1 })
-      .limit(100)
-      .lean();
+    return { meta,  history};
 
-    if (!history) {
-      return [];
-    }
 
-    console.log(`✓ Retrieved ${history.length} chat records for user ${userId}`);
-    return history;
-  } catch (error) {
-    console.error(`✗ Error retrieving chat history for user ${userId}:`, error);
-    throw error;
+
+  } catch (error:any) {
+
+    throw new ApiError(httpStatus.SERVICE_UNAVAILABLE,`✗ Error retrieving chat history for user ${userId}:`, error);
   }
 }
 

@@ -10,4 +10,11 @@ export const USER_ROLE = {
     isProgress:'isProgress',
     blocked:'blocked'
   }  as const;
+
+
+  export const GENDER={
+    male:"male",
+    female:"female",
+    others:"others"
+  } as const;
   

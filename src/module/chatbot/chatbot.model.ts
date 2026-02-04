@@ -56,12 +56,8 @@ const ChatHistorySchema = new Schema<IChatHistory>(
       type: String,
       default: "general",
       trim: true,
-    },
-    sessionId: {
-      type: String,
-      index: true,
-      trim: true,
-    },
+    }
+   
   },
   {
     timestamps: true,
