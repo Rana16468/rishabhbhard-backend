@@ -44,8 +44,9 @@ const changeMyProfileSchema = z.object({
       .optional(),
 
     photo: z.string({ required_error: "optional photot" }).url().optional(), 
-    language: z.string({message:" language is not  required"}).optional(),
-    age: z.string({message:" age is not required"}).optional()
+   language: z.array(z.string({required_error:"language is not required"})).optional(),
+    age: z.string({message:" age is not required"}).optional(),
+    nickname: z.string({required_error:" nickname is not Required"}).optional(),
   }),
 });
 

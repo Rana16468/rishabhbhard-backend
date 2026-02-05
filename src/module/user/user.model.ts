@@ -7,7 +7,7 @@ import { TUser, UserModel } from './user.interface';
 const TUserSchema = new Schema<TUser, UserModel>(
   {
     name: { type: String, required: true },
-
+    nickname :{type:String, required:true},
     password: { type: String, required: true, select: 0 },
 
     email: {
@@ -17,11 +17,11 @@ const TUserSchema = new Schema<TUser, UserModel>(
       index:true
     },
 
-    phoneNumber: { type: String },
+    phoneNumber: { type: String, required:[false,'phone number is not required'] },
 
     verificationCode: { type: Number, required:[false, 'verificationCode is not required'], index: true },
 
-    isVerify: { type: Boolean,required:[false, 'isVerify is not required'], default: false },
+    isVerify: { type: Boolean,required:[false, 'isVerify is not required'], index:true, default: false },
 
     gender: {
       type: String,

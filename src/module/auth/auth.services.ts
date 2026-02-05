@@ -156,44 +156,46 @@ const changeMyProfileIntoDb = async (
 ): Promise<ProfileUpdateResponse> => {
   try {
     const file = req.file;
-    const { name, language, age} = req.body as {
+
+    const { name, language, age, nickname } = req.body as {
       name?: string;
-      language?: string;
-      age?:string;
-      
+      language?: string[];
+      age?: string;
+      nickname?:string;
     };
 
     const updateData: {
       name?: string;
       photo?: string;
-      language?: string;
-      age?: string
-    
+      language?: string[];
+      age?: string;
+      nickname?:string;
     } = {};
 
     if (name) {
       updateData.name = name;
     }
-    if (language) {
+
+    if (Array.isArray(language) && language.length > 0) {
       updateData.language = language;
     }
 
-    if(age){
-      updateData.age=age
+    if (age) {
+      updateData.age = age;
     }
-    
+    if(nickname){
+      updateData.nickname=nickname
+    }
+
     if (file) {
+      const username = "rishabhbhard";
+      const randomNumber = Math.floor(10000 + Math.random() * 90000);
+      const imageName = `${username}${randomNumber}`.trim();
 
-const username = "rishabhbhard";
-const randomNumber = Math.floor(10000 + Math.random() * 90000);
+      const path = file.path.replace(/\\/g, "/");
 
-
-// example output: rishabhbhard45788
-
-      const imageName=`${`${username}${randomNumber}`.trim()}`;
-       const path=file?.path?.replace(/\\/g, "/");
-        const  {secure_url}= await sendFileToCloudinary(imageName,path) 
-        updateData.photo = secure_url as string
+      const { secure_url } = await sendFileToCloudinary(imageName, path);
+      updateData.photo = secure_url as string;
     }
 
     if (Object.keys(updateData).length === 0) {
@@ -206,10 +208,10 @@ const randomNumber = Math.floor(10000 + Math.random() * 90000);
 
     const result = await users.findByIdAndUpdate(
       id,
-      { $set: { ...updateData } },
+      { $set: updateData },
       {
         new: true,
-        upsert: true,
+        upsert: false, // ⚠️ better: don’t create new user accidentally
       },
     );
 
@@ -233,6 +235,7 @@ const randomNumber = Math.floor(10000 + Math.random() * 90000);
     );
   }
 };
+
 
 
 const findByAllUsersAdminIntoDb = async (query: Record<string, unknown>) => {

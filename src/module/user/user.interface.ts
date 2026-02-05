@@ -8,6 +8,7 @@ export interface UserResponse {
 
 export type TUser = {
   name: string;
+  nickname:string;
   role: 'user' | 'admin' | 'superAdmin';
   userUniqueId: string;
   password: string;

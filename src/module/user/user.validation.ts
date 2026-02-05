@@ -4,7 +4,7 @@ import { USER_ACCESSIBILITY, USER_ROLE } from './user.constant';
  const createUserZodSchema = z.object({
   body: z.object({
     name: z.string({ required_error: 'User name is Required' }),
-
+   nickname: z.string({required_error:" nickname is Required"}),
     password: z.string({
       required_error: 'Password is Required',
     }),
@@ -71,6 +71,8 @@ const UpdateUserProfileSchema = z.object({
       .min(3, { message: 'min 3 character accepted' })
       .max(15, { message: 'max 15 character accepted' })
       .optional(),
+       language: z.array(z.string({required_error:"language is not required"})).optional(),
+       nickname: z.string({required_error:" nickname is not Required"}).optional(),
     photo: z.string({ required_error: 'optional photot' }).url().optional(),
   }),
 });
