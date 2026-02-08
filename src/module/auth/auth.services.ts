@@ -135,7 +135,7 @@ const myprofileIntoDb = async (id: string) => {
   try {
     return await users
       .findById(id)
-      .select("name email location photo manufacturer model updatedA ");
+      .select("name nickname email location photo language age manufacturer model updatedA ");
   } catch (error: any) {
     throw new ApiError(
       httpStatus.SERVICE_UNAVAILABLE,
