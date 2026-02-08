@@ -15,6 +15,7 @@ const chatbotValidationSchema = z.object({
       .trim()
       .min(1, "Text cannot be empty")
       .max(2000, "Text cannot exceed 2000 characters"),
+    
 
     history: z
       .array(

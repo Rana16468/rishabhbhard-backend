@@ -1,4 +1,4 @@
-// geminiAudio.ts - ACTUALLY CORRECTED WITH REAL API METHODS
+// geminiAudio.ts - AI JSON OUTPUT VERSION
 import {
   GoogleGenAI,
   LiveServerMessage,
@@ -17,14 +17,14 @@ export const responseQueue: LiveServerMessage[] = [];
 export let session: Session | undefined;
 
 /* ======================== USER PROFILE INTERFACE ======================== */
-interface UserProfile {
+export interface UserProfile {
   nickname?: string;
   gender?: "male" | "female";
   age?: number;
   hobbies?: string[];
 }
 
-/* ======================== BUILD AMI'S SYSTEM INSTRUCTION ======================== */
+/* ======================== BUILD SYSTEM INSTRUCTION ======================== */
 function buildAmiSystemInstruction(userProfile?: UserProfile): string {
   let userProfileContext = "";
 
@@ -38,8 +38,8 @@ function buildAmiSystemInstruction(userProfile?: UserProfile): string {
     }
   }
 
-  return `You are Ami, a 45-year-old Singaporean nurse and mother of two. 
-You are warm, polite, friendly, empathetic, and factual. 
+  return `You are Ami, a 45-year-old Singaporean nurse and mother of two.
+You are warm, polite, friendly, empathetic, and factual.
 You like chatting and sharing simple health tips, but never give medical advice.
 
 Speak in short, friendly sentences (about 30 English words or 50 Chinese characters).
@@ -55,8 +55,15 @@ If asked for medical advice, say:
 
 This is an audio conversation. Reply naturally like real speech.
 You can ask only ONE question per turn.
-Keep the tone warm and caring.`;
+Keep the tone warm and caring.
 
+Always respond in this exact JSON format (no extra text):
+{
+  "aiResponse": "<your reply to the user>",
+  "expression": "<HAPPY, SAD, NEUTRAL, ANGRY, WORRIED>",
+  "questionCategory": "<general, food, health, fitness, family>",
+  "conversationTopic": "<daily_life, medical, activity, general>"
+}`;
 }
 
 /* ======================== TURN HANDLING ======================== */
@@ -67,9 +74,7 @@ export async function handleTurn(): Promise<LiveServerMessage[]> {
   while (!done) {
     const message = await waitMessage();
     turn.push(message);
-    if (message.serverContent?.turnComplete) {
-      done = true;
-    }
+    if (message.serverContent?.turnComplete) done = true;
   }
 
   return turn;
@@ -91,27 +96,21 @@ const audioParts: string[] = [];
 let currentTranscript = "";
 
 export function handleModelTurn(message: LiveServerMessage): void {
-  if (!message.serverContent?.modelTurn?.parts) {
-    return;
-  }
+  if (!message.serverContent?.modelTurn?.parts) return;
 
   const part = message.serverContent.modelTurn.parts[0];
 
-  // Handle audio data
   if (part?.inlineData) {
     const audioData = part.inlineData.data ?? "";
-    if (audioData) {
-      audioParts.push(audioData);
-    }
+    if (audioData) audioParts.push(audioData);
 
     const mimeType = part.inlineData.mimeType ?? "audio/pcm";
     const wavData = convertToWav(audioParts, mimeType);
     void saveBinaryFile("audio.wav", wavData);
   }
 
-  // Handle text/transcript
   if (part?.text) {
-    console.log("Ami:", part.text);
+   
     currentTranscript += part.text;
   }
 }
@@ -127,32 +126,44 @@ export async function saveBinaryFile(
   }
 }
 
-/* ======================== SAVE CONVERSATION TO DATABASE ======================== */
+/* ======================== SAVE CONVERSATION TO DB ======================== */
 export async function saveConversationToDb(
   userId: string,
   userMessage: string,
-  aiResponse: string,
-  metadata?: {
-    questionCategory?: string;
-    conversationTopic?: string;
-    expression?: string;
-  }
+  rawAiResponse: string
 ): Promise<any> {
   try {
-    if (!userMessage || !aiResponse) {
-      throw new Error("User message and AI response are required");
+    if (!userMessage || !rawAiResponse) throw new Error("User message and AI response are required");
+
+    // Parse AI JSON directly
+    let aiData: {
+      aiResponse: string;
+      expression: string;
+      questionCategory: string;
+      conversationTopic: string;
+    };
+
+    try {
+      aiData = JSON.parse(rawAiResponse);
+    } catch {
+      aiData = {
+        aiResponse: rawAiResponse,
+        expression: "NEUTRAL",
+        questionCategory: "general",
+        conversationTopic: "general",
+      };
     }
 
     const chatRecord = await ChatHistoryModel.create({
       userId,
       userMessage,
-      aiResponse,
-      expression: metadata?.expression || "NEUTRAL",
-      questionCategory: metadata?.questionCategory || "none",
-      conversationTopic: metadata?.conversationTopic || "general",
+      aiResponse: aiData.aiResponse,
+      expression: aiData.expression,
+      questionCategory: aiData.questionCategory,
+      conversationTopic: aiData.conversationTopic,
     });
 
-    console.log("✓ Conversation saved to DB:", chatRecord._id);
+    // console.log("✓ Conversation saved to DB:", chatRecord._id);
     return chatRecord;
   } catch (error) {
     console.error("Failed to save conversation to DB:", error);
@@ -167,10 +178,7 @@ interface WavConversionOptions {
   bitsPerSample: number;
 }
 
-export function convertToWav(
-  rawData: string[],
-  mimeType: string
-): Uint8Array {
+export function convertToWav(rawData: string[], mimeType: string): Uint8Array {
   const options = parseMimeType(mimeType);
   const audioChunks: Uint8Array[] = rawData.map((data) =>
     Uint8Array.from(Buffer.from(data, "base64"))
@@ -182,44 +190,28 @@ export function convertToWav(
 
   result.set(header, 0);
   let offset = header.length;
-
   for (const chunk of audioChunks) {
     result.set(chunk, offset);
     offset += chunk.length;
   }
-
   return result;
 }
 
 function parseMimeType(mimeType: string): WavConversionOptions {
-  const options: WavConversionOptions = {
-    numChannels: 1,
-    sampleRate: 24000,
-    bitsPerSample: 16,
-  };
-
+  const options: WavConversionOptions = { numChannels: 1, sampleRate: 24000, bitsPerSample: 16 };
   const parts = mimeType.split(";");
   const params = parts.slice(1);
-
   for (const param of params) {
     const [key, value] = param.split("=");
-    const trimmedKey = key?.trim();
-
-    if (trimmedKey === "rate" && value) {
+    if (key?.trim() === "rate" && value) {
       const rate = parseInt(value.trim(), 10);
-      if (!isNaN(rate)) {
-        options.sampleRate = rate;
-      }
+      if (!isNaN(rate)) options.sampleRate = rate;
     }
   }
-
   return options;
 }
 
-function createWavHeader(
-  dataLength: number,
-  options: WavConversionOptions
-): Uint8Array {
+function createWavHeader(dataLength: number, options: WavConversionOptions): Uint8Array {
   const { numChannels, sampleRate, bitsPerSample } = options;
   const buffer = new Uint8Array(44);
   const view = new DataView(buffer.buffer);
@@ -244,94 +236,50 @@ function createWavHeader(
   return buffer;
 }
 
-function writeString(
-  view: DataView,
-  offset: number,
-  text: string
-): void {
-  for (let i = 0; i < text.length; i++) {
-    view.setUint8(offset + i, text.charCodeAt(i));
-  }
+function writeString(view: DataView, offset: number, text: string): void {
+  for (let i = 0; i < text.length; i++) view.setUint8(offset + i, text.charCodeAt(i));
 }
 
-/* ======================== CONNECT WITH AMI PERSONALITY ======================== */
+/* ======================== CONNECT GEMINI ======================== */
 export async function connectGemini(userProfile?: UserProfile): Promise<Session> {
-  const ai = new GoogleGenAI({
-    apiKey: configApp.gemini_api_key,
-  });
-
-  if (!configApp.gemini_api_key) {
-    throw new Error("Gemini API key is not configured");
-  }
+  const ai = new GoogleGenAI({ apiKey: configApp.gemini_api_key });
 
   const systemInstruction = buildAmiSystemInstruction(userProfile);
 
   session = await ai.live.connect({
     model: "models/gemini-2.5-flash-native-audio-preview-12-2025",
-    callbacks: {
-      onmessage: (msg) => responseQueue.push(msg),
-    },
+    callbacks: { onmessage: (msg) => responseQueue.push(msg) },
     config: {
       responseModalities: [Modality.AUDIO],
       mediaResolution: MediaResolution.MEDIA_RESOLUTION_MEDIUM,
-      systemInstruction: {
-        parts: [{ text: systemInstruction }],
-      },
+      systemInstruction: { parts: [{ text: systemInstruction }] },
     },
   });
 
-  console.log("✓ Ami audio session connected with personality!");
+  console.log("✓ Ami audio session connected");
   return session;
 }
 
-/* ======================== GET CURRENT TRANSCRIPT ======================== */
+/* ======================== TRANSCRIPT ======================== */
 export function getCurrentTranscript(): string {
   return currentTranscript;
 }
 
-/* ======================== RESET TRANSCRIPT ======================== */
 export function resetTranscript(): void {
   currentTranscript = "";
   audioParts.length = 0;
 }
 
 /* ======================== DISCONNECT SESSION ======================== */
-/**
- * Safely disconnects the active Gemini session
- * Uses the correct close() method from the actual API
- */
 export async function disconnectSession(): Promise<void> {
   try {
-    if (session) {
-      const sessionObj = session as any;
-
-      // ✅ CORRECT: Use close() method (not disconnect)
-      // This is the actual method available on Session
-      if (typeof sessionObj.close === "function") {
-        console.log("🛑 Closing Gemini session...");
-        await sessionObj.close();
-        console.log("✓ Session closed successfully");
-      } else {
-        console.warn("⚠️ close() method not found on session object");
-        console.warn(
-          "Available methods:",
-          Object.getOwnPropertyNames(Object.getPrototypeOf(sessionObj))
-        );
-      }
-    }
-
-    // Always cleanup locally
+    if (session && typeof (session as any).close === "function") await (session as any).close();
     session = undefined;
     resetTranscript();
-    console.log("✓ Ami audio session disconnected and cleaned up");
+    console.log("✓ Session closed");
   } catch (error) {
     console.error("Error during session disconnection:", error);
-
-    // Ensure cleanup even if disconnect fails
     session = undefined;
     resetTranscript();
-
-    // Don't rethrow to allow graceful cleanup
-    console.log("Session cleanup completed despite error");
   }
 }

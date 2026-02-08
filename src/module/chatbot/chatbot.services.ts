@@ -221,13 +221,9 @@ async function sendAudioMessage(
       await saveConversationToDb(
         userId,
         "User audio message",
-        aiResponse || "(Audio message - no text response)",
+        aiResponse 
     
-        {
-          questionCategory: "none",
-          conversationTopic: "general",
-          expression: "NEUTRAL",
-        }
+       
       );
       console.log("✓ Audio message saved to database");
     } catch (dbError) {
@@ -309,12 +305,8 @@ async function sendTextMessage(
       await saveConversationToDb(
         userId,
         trimmedText,
-        aiResponse || "(No response)",
-        {
-          questionCategory: "none",
-          conversationTopic: "general",
-          expression: "NEUTRAL",
-        }
+        aiResponse || "(No response)"
+      
       );
       console.log("✓ Text message saved to database");
     } catch (dbError) {
