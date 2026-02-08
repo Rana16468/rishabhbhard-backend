@@ -135,7 +135,7 @@ const myprofileIntoDb = async (id: string) => {
   try {
     return await users
       .findById(id)
-      .select("name nickname email location photo language age manufacturer model updatedA ");
+      .select("name nickname email location photo language age hobbies updatedA ");
   } catch (error: any) {
     throw new ApiError(
       httpStatus.SERVICE_UNAVAILABLE,
@@ -157,11 +157,12 @@ const changeMyProfileIntoDb = async (
   try {
     const file = req.file;
 
-    const { name, language, age, nickname } = req.body as {
+    const { name, language, age, nickname, hobbies } = req.body as {
       name?: string;
       language?: string[];
       age?: string;
       nickname?:string;
+      hobbies?:string[]
     };
 
     const updateData: {
@@ -170,6 +171,7 @@ const changeMyProfileIntoDb = async (
       language?: string[];
       age?: string;
       nickname?:string;
+       hobbies?:string[]
     } = {};
 
     if (name) {
@@ -180,6 +182,9 @@ const changeMyProfileIntoDb = async (
       updateData.language = language;
     }
 
+    if (Array.isArray(hobbies) && hobbies.length > 0) {
+      updateData.hobbies= hobbies;
+    }
     if (age) {
       updateData.age = age;
     }
@@ -205,6 +210,7 @@ const changeMyProfileIntoDb = async (
         "",
       );
     }
+
 
     const result = await users.findByIdAndUpdate(
       id,
