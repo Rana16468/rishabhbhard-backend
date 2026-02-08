@@ -48,9 +48,47 @@ const myGameLevelIntoDb = async (userId: string) => {
 };
 
 
+
+
+
+const deleteGameOneDataIntoDb = async (userId: string, id: string) => {
+  try {
+    // Check if document exists for this user
+    const isExistGame = await gameone.exists({ userId, _id: id });
+
+    if (!isExistGame) {
+      throw new ApiError(
+        httpStatus.NOT_EXTENDED,
+        "This game data does not exist",
+        ""
+      );
+    }
+
+    // Delete the document
+    const result = await gameone.deleteOne({ userId, _id: id });
+
+    if (result.deletedCount !== 1) {
+      throw new ApiError(
+        httpStatus.NOT_EXTENDED,
+        "Failed to delete the game data",
+        ""
+      );
+    }
+
+    return {
+      status: true,
+      message: "Successfully deleted",
+    };
+  } catch (error) {
+    catchError(error);
+  }
+};
+
+
 const GameOneServices={
     recordedGameOneDataIntoDB,
-    myGameLevelIntoDb
+    myGameLevelIntoDb,
+    deleteGameOneDataIntoDb
 };
 
 export default GameOneServices;

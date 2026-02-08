@@ -29,12 +29,28 @@ const myGameLevel:RequestHandler=catchAsync(async(req , res)=>{
     data: result
   });
 
+});
+
+
+
+const  deleteGameOneData:RequestHandler=catchAsync(async(req , res)=>{
+
+
+      const result=await GameOneServices.deleteGameOneDataIntoDb(req.user.id, req.params.id);
+ sendRespone(res, {
+    success: true,
+    statusCode: httpStatus.OK,
+    message: "Successfully Delete",
+    data: result
+  });
+
 })
 
 
 const  GameOneController ={
     recordedGameOneData,
-    myGameLevel
+    myGameLevel,
+     deleteGameOneData
 };
 
 export default GameOneController;
