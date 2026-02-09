@@ -85,6 +85,8 @@ router.get(
 /* delete chat  */
 
 router.delete("/delete_specific_chatbot/:id", auth(USER_ROLE.superAdmin,USER_ROLE.admin), chatBotController. deleteChatBotInfoInfo)
+router.post("/store_chat_data", auth(USER_ROLE.user), validationRequest(chatbotValidation.ChatHistoryZodSchema), chatBotController.chatDataStore);
+
 
 export const chatBotRoutes = router;
 export default router;

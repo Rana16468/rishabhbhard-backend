@@ -9,14 +9,6 @@ import users from '../module/user/user.model';
 import { USER_ACCESSIBILITY } from '../module/user/user.constant';
 
 
-
-
-
-
-
-
-
-
 const auth = (...requireRoles: TUserRole[]) => {
   return catchAsync(
     async (req: Request, _res: Response, next: NextFunction) => {

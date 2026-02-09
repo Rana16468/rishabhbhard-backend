@@ -101,12 +101,26 @@ const deleteChatBotInfoInfo:RequestHandler=catchAsync(async(req , res)=>{
         data: result,
       });
 
+});
+
+
+const  chatDataStore:RequestHandler=catchAsync(async(req , res)=>{
+
+
+     const  result=await chatBotServices.chatDataStoreIntoDb(req.body, req.user.id);
+      sendRespone(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: "successfully recorded",
+        data: result,
+      });
 })
 
 const chatBotController = {
   textToTextChat,
   getChatHistory,
-   deleteChatBotInfoInfo
+   deleteChatBotInfoInfo,
+   chatDataStore
 };
 
 export default chatBotController;

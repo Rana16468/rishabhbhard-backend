@@ -91,11 +91,66 @@ const getChatHistoryValidationSchema = z.object({
   }),
 });
 
+//  userMessage,
+//     aiResponse: currentJsonData.aiResponse,
+//     expression: currentJsonData.expression,
+//     questionCategory: currentJsonData.questionCategory,
+//     conversationTopic: currentJsonData.conversationTopic,
+
+ const ChatHistoryZodSchema = z.object({
+
+   body: z.object({
+     userMessage: z
+    .string()
+    .trim()
+    .min(1, { message: "User message is required" }),
+
+  aiResponse: z
+    .string()
+    .trim()
+    .min(1, { message: "AI response is required" }),
+
+  expression: z.enum([
+    "HAPPY",
+    "SAD",
+    "SURPRISED",
+    "NEUTRAL",
+    "THINKING",
+    "EXCITED",
+    "CONFUSED",
+    "ANGRY",
+    "WORRIED",
+  ]).default("NEUTRAL"),
+
+  questionCategory: z.enum([
+    "general",
+    "food",
+    "health",
+    "fitness",
+    "family",
+    "autobiographical memory",
+    "semantic memory",
+    "working memory",
+    "executive functions",
+    "metacognition",
+    "none",
+  ]).default("general"),
+
+  conversationTopic: z.enum([
+    "daily_life",
+    "medical",
+    "activity",
+    "general",
+  ]).default("general"),
+   })
+});
+
 const chatbotValidation = {
   chatbotValidationSchema,
   audioMessageValidationSchema,
   startAudioSessionValidationSchema,
   getChatHistoryValidationSchema,
+   ChatHistoryZodSchema
 };
 
 export default chatbotValidation;

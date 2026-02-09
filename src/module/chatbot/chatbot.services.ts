@@ -7,14 +7,16 @@ import {
   session,
   connectGemini,
   disconnectSession,
-  getCurrentTranscript,
-  handleTurn,
-  resetTranscript,
   saveConversationToDb,
+  getCurrentTranscript,
   getCurrentExpression,
+  resetTranscript,
 } from "../../utility/Ai_Integation/AI_Integation";
 import ChatHistoryModel from "./chatbot.model";
 import catchError from "../../app/error/catchError";
+import { Part } from "@google/genai";
+import { partialUtil } from "zod/lib/helpers/partialUtil";
+import { IChatHistory } from "./chatbot.interface";
 
 /* ======================== INTERFACES ======================== */
 export interface UserProfile {
@@ -24,24 +26,17 @@ export interface UserProfile {
   hobbies?: string[];
 }
 
-interface SendMessageResult {
-  transcript: string;
-  expression: string;
-}
-
 /* ======================== SESSION HELPERS ======================== */
 async function sendTextMessageToSession(text: string): Promise<void> {
   if (!session) throw new Error("No active session");
 
-  const sessionObj = session as any;
+  const s: any = session;
 
-  if (typeof sessionObj.sendClientContent !== "function")
-    throw new Error("sendClientContent method not found on session");
+  if (typeof s.sendClientContent !== "function")
+    throw new Error("sendClientContent not found on session");
 
-  await sessionObj.sendClientContent({
-    turns: [
-      { role: "user", parts: [{ text }] }
-    ],
+  await s.sendClientContent({
+    turns: [{ role: "user", parts: [{ text }] }],
     turnComplete: true,
   });
 }
@@ -49,59 +44,43 @@ async function sendTextMessageToSession(text: string): Promise<void> {
 async function sendAudioMessageToSession(audioData: string): Promise<void> {
   if (!session) throw new Error("No active session");
 
-  const sessionObj = session as any;
+  const s: any = session;
 
-  if (typeof sessionObj.sendRealtimeInput !== "function")
-    throw new Error("sendRealtimeInput method not found on session");
+  if (typeof s.sendRealtimeInput !== "function")
+    throw new Error("sendRealtimeInput not found on session");
 
-  await sessionObj.sendRealtimeInput({
-    mediaChunks: [
-      { mimeType: "audio/pcm", data: audioData }
-    ]
+  await s.sendRealtimeInput({
+    mediaChunks: [{ mimeType: "audio/pcm", data: audioData }],
   });
 }
 
-/* ======================== CHAT FUNCTIONS ======================== */
+/* ======================== WAIT FOR AI ======================== */
+function waitForAiResponse(timeout = 2000): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, timeout));
+}
 
-/**
- * Text chat -> always returns structured JSON
- */
+/* ======================== TEXT CHAT ======================== */
 export async function textToTextChatIntoDb(
   userId: string,
   text: string,
   history?: any[]
 ) {
-  if (!text || text.trim().length === 0)
-    throw new Error("Text cannot be empty");
+  if (!text || !text.trim()) throw new Error("Text cannot be empty");
 
   try {
-    const sessionId = new Date().getTime().toString();
+    const sessionId = Date.now().toString();
 
-    if (!session) {
-      await connectGemini();
-    }
+    if (!session) await connectGemini();
 
     resetTranscript();
 
-    // Send message to AI
     await sendTextMessageToSession(text);
+    await waitForAiResponse();
 
-    // Wait for response
-    await handleTurn();
     const transcript = getCurrentTranscript();
     const expression = getCurrentExpression();
 
-    // Save to DB
-    try {
-      await saveConversationToDb(userId, text, JSON.stringify({
-        aiResponse: transcript,
-        expression,
-        questionCategory: "general",
-        conversationTopic: "general"
-      }));
-    } catch (dbError) {
-      console.error("Failed to save chat to DB:", dbError);
-    }
+    await saveConversationToDb(userId, text);
 
     return {
       success: true,
@@ -109,18 +88,15 @@ export async function textToTextChatIntoDb(
       expression,
       sessionId,
       timestamp: new Date().toISOString(),
-      historyCount: history?.length || 0
+      historyCount: history?.length || 0,
     };
-
   } catch (error) {
-    console.error("Error in textToTextChatIntoDb:", error);
+    console.error("textToTextChatIntoDb error:", error);
     throw error;
   }
 }
 
-/**
- * Audio chat -> always returns structured JSON
- */
+/* ======================== AUDIO CHAT ======================== */
 export async function audioChatIntoDb(
   userId: string,
   audioData: string,
@@ -133,35 +109,23 @@ export async function audioChatIntoDb(
   timestamp: string;
   historyCount: number;
 }> {
-  if (!audioData || audioData.trim().length === 0)
+  if (!audioData || !audioData.trim())
     throw new Error("Audio data is required");
 
   try {
-    const sessionId = new Date().getTime().toString();
+    const sessionId = Date.now().toString();
 
     if (!session) await connectGemini();
 
     resetTranscript();
 
-    // Send audio to AI
     await sendAudioMessageToSession(audioData);
+    await waitForAiResponse();
 
-    // Wait for response
-    await handleTurn();
     const transcript = getCurrentTranscript();
     const expression = getCurrentExpression();
 
-    // Save to DB
-    try {
-      await saveConversationToDb(userId, "User audio message", JSON.stringify({
-        aiResponse: transcript,
-        expression,
-        questionCategory: "general",
-        conversationTopic: "general"
-      }));
-    } catch (dbError) {
-      console.error("Failed to save audio chat to DB:", dbError);
-    }
+    await saveConversationToDb(userId, "User audio message");
 
     return {
       success: true,
@@ -169,10 +133,10 @@ export async function audioChatIntoDb(
       expression,
       sessionId,
       timestamp: new Date().toISOString(),
-      historyCount: history?.length || 0
+      historyCount: history?.length || 0,
     };
   } catch (error) {
-    console.error("Error in audioChatIntoDb:", error);
+    console.error("audioChatIntoDb error:", error);
     throw error;
   }
 }
@@ -181,10 +145,9 @@ export async function audioChatIntoDb(
 export async function startAudioSession(
   userId: string,
   userProfile?: UserProfile
-): Promise<any> {
+) {
   try {
-    const audioSession = await connectGemini(userProfile);
-    return audioSession;
+    return await connectGemini(userProfile);
   } catch (error) {
     console.error("Failed to start session:", error);
     throw error;
@@ -202,15 +165,15 @@ export async function endAudioSession(): Promise<void> {
 /* ======================== CHAT HISTORY ======================== */
 export async function getChatHistory(userId: string) {
   try {
-    const allHistoryQuery = new QueryBuilder(ChatHistoryModel.find({ userId }), {})
+    const qb = new QueryBuilder(ChatHistoryModel.find({ userId }), {})
       .search([])
       .filter()
       .sort()
       .paginate()
       .fields();
 
-    const history = await allHistoryQuery.modelQuery;
-    const meta = await allHistoryQuery.countTotal();
+    const history = await qb.modelQuery;
+    const meta = await qb.countTotal();
 
     return { meta, history };
   } catch (error: any) {
@@ -220,21 +183,17 @@ export async function getChatHistory(userId: string) {
       error
     );
   }
-};
+}
 
 const deleteChatBotInfoInfoDb = async (userId: string, chatId: string) => {
   try {
     const result = await ChatHistoryModel.deleteOne({
       _id: chatId,
-      userId: userId,
+      userId,
     });
 
     if (result.deletedCount === 0) {
-      throw new ApiError(
-        httpStatus.NOT_FOUND,
-        "Chat not found or already deleted",
-        ""
-      );
+      throw new ApiError(httpStatus.NOT_FOUND, "Chat not found", "");
     }
 
     return {
@@ -243,10 +202,28 @@ const deleteChatBotInfoInfoDb = async (userId: string, chatId: string) => {
     };
   } catch (error) {
     catchError(error);
-    throw error; 
+    throw error;
   }
 };
 
+
+const chatDataStoreIntoDb=async(payload:Partial<IChatHistory>, userId:string)=>{
+
+
+      try{
+
+        const result=await ChatHistoryModel.create({...payload, userId});
+
+         return result;
+
+      }
+      catch(error){
+        catchError(error);
+      }
+
+
+    
+}
 
 /* ======================== EXPORT ======================== */
 const chatBotServices = {
@@ -255,7 +232,8 @@ const chatBotServices = {
   textToTextChatIntoDb,
   audioChatIntoDb,
   getChatHistory,
- deleteChatBotInfoInfoDb 
+  deleteChatBotInfoInfoDb,
+  chatDataStoreIntoDb
 };
 
 export default chatBotServices;
