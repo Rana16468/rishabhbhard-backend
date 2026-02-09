@@ -12,7 +12,7 @@
     "lint:fix": "npm run lint --fix",
     "prettier": "prettier --ignore-path .gitignore --write \"./src/**/*.+(js|ts|json)\"",
     "prettier:fix": "npx prettier --write src",
-     "dev": "npm install && npm run build && npm run start:prod"
+    "dev": "npm install && npm run build"
   },
   "keywords": [],
   "author": "",

@@ -60,7 +60,7 @@ Keep the tone warm and caring.
 Always respond in this exact JSON format (no extra text):
 {
   "aiResponse": "<your reply to the user>",
-  "expression": "<HAPPY, SAD, NEUTRAL, ANGRY, WORRIED>",
+  "expression": "<HAPPY, SAD, NEUTRAL, WORRIED>",
   "questionCategory": "<general, food, health, fitness, family>",
   "conversationTopic": "<daily_life, medical, activity, general>"
 }`;
@@ -94,7 +94,7 @@ export async function waitMessage(): Promise<LiveServerMessage> {
 /* ======================== AUDIO HANDLING ======================== */
 const audioParts: string[] = [];
 let currentTranscript = "";
-let currentExpression: "HAPPY" | "SAD" | "NEUTRAL" | "ANGRY" | "WORRIED" = "NEUTRAL";
+let currentExpression: "HAPPY" | "SAD" | "NEUTRAL" | "WORRIED" = "NEUTRAL";
 
 export function handleModelTurn(message: LiveServerMessage): void {
   if (!message.serverContent?.modelTurn?.parts) return;
