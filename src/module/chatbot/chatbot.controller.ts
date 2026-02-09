@@ -27,16 +27,14 @@ const textToTextChat: RequestHandler = catchAsync(
     }
 
     try {
-      const result = await chatBotServices.textToTextChatIntoDb(userId, {
-        text: text.trim(),
-        history,
-      });
+      const result = await chatBotServices.textToTextChatIntoDb(userId, text.trim(), history);
 
+      // Directly return the AI JSON output
       sendRespone(res, {
         statusCode: httpStatus.OK,
         success: true,
         message: "Chat response generated successfully",
-        data: result,
+        data: result, // result already has {message, expression, sessionId, timestamp, historyCount}
       });
     } catch (error) {
       sendRespone(res, {

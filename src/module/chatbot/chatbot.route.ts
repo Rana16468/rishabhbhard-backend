@@ -35,17 +35,16 @@ router.post(
 router.get(
   "/history",
   auth(USER_ROLE.user),
-  // validationRequest(chatbotValidation.getChatHistoryValidationSchema),
   chatBotController.getChatHistory
 );
 
 /**
- * @route   POST /api/v1/chat/audio
- * @desc    Send audio message to Ami
- * @access  Protected (User role required)
- * @param   {string} audioData - Base64 encoded audio data
- * @param   {string} sessionId - Session ID
- * @returns {Object} AI response transcript
+ * @route   
+ * @desc    
+ * @access  
+ * @param   {string} audioData 
+ * @param   {string} sessionId 
+ * @returns {Object} 
  */
 // Uncomment when audio endpoint is implemented
 // router.post(

@@ -94,12 +94,14 @@ export async function waitMessage(): Promise<LiveServerMessage> {
 /* ======================== AUDIO HANDLING ======================== */
 const audioParts: string[] = [];
 let currentTranscript = "";
+let currentExpression: "HAPPY" | "SAD" | "NEUTRAL" | "ANGRY" | "WORRIED" = "NEUTRAL";
 
 export function handleModelTurn(message: LiveServerMessage): void {
   if (!message.serverContent?.modelTurn?.parts) return;
 
   const part = message.serverContent.modelTurn.parts[0];
 
+  // handle audio
   if (part?.inlineData) {
     const audioData = part.inlineData.data ?? "";
     if (audioData) audioParts.push(audioData);
@@ -109,12 +111,21 @@ export function handleModelTurn(message: LiveServerMessage): void {
     void saveBinaryFile("audio.wav", wavData);
   }
 
+  // handle text and expression
   if (part?.text) {
-   
-    currentTranscript += part.text;
+    try {
+      const aiData = JSON.parse(part.text);
+      if (aiData.aiResponse) currentTranscript += aiData.aiResponse + " ";
+      if (aiData.expression) currentExpression = aiData.expression;
+    } catch {
+      // fallback if not JSON
+      currentTranscript += part.text + " ";
+      currentExpression = "NEUTRAL";
+    }
   }
 }
 
+/* ======================== SAVE AUDIO FILE ======================== */
 export async function saveBinaryFile(
   fileName: string,
   content: Uint8Array
@@ -133,9 +144,9 @@ export async function saveConversationToDb(
   rawAiResponse: string
 ): Promise<any> {
   try {
-    if (!userMessage || !rawAiResponse) throw new Error("User message and AI response are required");
+    if (!userMessage || !rawAiResponse)
+      throw new Error("User message and AI response are required");
 
-    // Parse AI JSON directly
     let aiData: {
       aiResponse: string;
       expression: string;
@@ -163,7 +174,6 @@ export async function saveConversationToDb(
       conversationTopic: aiData.conversationTopic,
     });
 
-    // console.log("✓ Conversation saved to DB:", chatRecord._id);
     return chatRecord;
   } catch (error) {
     console.error("Failed to save conversation to DB:", error);
@@ -260,7 +270,7 @@ export async function connectGemini(userProfile?: UserProfile): Promise<Session>
   return session;
 }
 
-/* ======================== TRANSCRIPT ======================== */
+/* ======================== TRANSCRIPT & EXPRESSION ======================== */
 export function getCurrentTranscript(): string {
   return currentTranscript;
 }
@@ -270,16 +280,26 @@ export function resetTranscript(): void {
   audioParts.length = 0;
 }
 
+export function getCurrentExpression(): typeof currentExpression {
+  return currentExpression;
+}
+
+export function resetExpression(): void {
+  currentExpression = "NEUTRAL";
+}
+
 /* ======================== DISCONNECT SESSION ======================== */
 export async function disconnectSession(): Promise<void> {
   try {
     if (session && typeof (session as any).close === "function") await (session as any).close();
     session = undefined;
     resetTranscript();
+    resetExpression();
     console.log("✓ Session closed");
   } catch (error) {
     console.error("Error during session disconnection:", error);
     session = undefined;
     resetTranscript();
+    resetExpression();
   }
 }
