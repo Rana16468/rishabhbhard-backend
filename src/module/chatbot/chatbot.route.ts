@@ -82,5 +82,9 @@ router.get(
 //   chatBotController.endSession
 // );
 
+/* delete chat  */
+
+router.delete("/delete_specific_chatbot/:id", auth(USER_ROLE.superAdmin,USER_ROLE.admin), chatBotController. deleteChatBotInfoInfo)
+
 export const chatBotRoutes = router;
 export default router;

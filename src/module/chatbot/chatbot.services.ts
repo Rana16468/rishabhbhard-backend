@@ -14,6 +14,7 @@ import {
   getCurrentExpression,
 } from "../../utility/Ai_Integation/AI_Integation";
 import ChatHistoryModel from "./chatbot.model";
+import catchError from "../../app/error/catchError";
 
 /* ======================== INTERFACES ======================== */
 export interface UserProfile {
@@ -219,7 +220,33 @@ export async function getChatHistory(userId: string) {
       error
     );
   }
-}
+};
+
+const deleteChatBotInfoInfoDb = async (userId: string, chatId: string) => {
+  try {
+    const result = await ChatHistoryModel.deleteOne({
+      _id: chatId,
+      userId: userId,
+    });
+
+    if (result.deletedCount === 0) {
+      throw new ApiError(
+        httpStatus.NOT_FOUND,
+        "Chat not found or already deleted",
+        ""
+      );
+    }
+
+    return {
+      status: true,
+      message: "Chat deleted successfully",
+    };
+  } catch (error) {
+    catchError(error);
+    throw error; 
+  }
+};
+
 
 /* ======================== EXPORT ======================== */
 const chatBotServices = {
@@ -228,6 +255,7 @@ const chatBotServices = {
   textToTextChatIntoDb,
   audioChatIntoDb,
   getChatHistory,
+ deleteChatBotInfoInfoDb 
 };
 
 export default chatBotServices;

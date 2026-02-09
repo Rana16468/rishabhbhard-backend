@@ -89,9 +89,24 @@ const getChatHistory: RequestHandler = catchAsync(
   }
 );
 
+
+const deleteChatBotInfoInfo:RequestHandler=catchAsync(async(req , res)=>{
+
+
+     const result=await chatBotServices.deleteChatBotInfoInfoDb(req.user.id, req.params.id);
+    sendRespone(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: "successfully delete",
+        data: result,
+      });
+
+})
+
 const chatBotController = {
   textToTextChat,
   getChatHistory,
+   deleteChatBotInfoInfo
 };
 
 export default chatBotController;

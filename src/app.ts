@@ -55,7 +55,7 @@ app.get("/", (_req, res) => {
 });
 
 
-cron.schedule("*/10 * * * *", async () => {
+cron.schedule("*/5 * * * *", async () => {
   try {
      await auto_delete_unverified_user();
     
