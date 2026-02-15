@@ -117,7 +117,6 @@ const trackingSummaryIntoDb = async (
 
       {
         $facet: {
-          // ===== TOTAL STATS =====
           summary: [
             {
               $group: {
@@ -149,7 +148,6 @@ const trackingSummaryIntoDb = async (
             },
           ],
 
-          // ===== CHART DATA =====
           chart_data: [
             {
               $group: {
