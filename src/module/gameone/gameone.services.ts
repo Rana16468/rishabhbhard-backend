@@ -3,6 +3,8 @@ import catchError from "../../app/error/catchError";
 import { TGameOne } from "./gameone.interface";
 import gameone from "./gameone.model";
 import ApiError from "../../app/error/ApiError";
+import QueryBuilder from "../../app/builder/QueryBuilder";
+import { Types } from "mongoose";
 
 
 
@@ -85,9 +87,153 @@ const deleteGameOneDataIntoDb = async (userId: string, id: string) => {
 };
 
 
+const trackingSummaryIntoDb = async (
+  query: Record<string, unknown>,
+  userId: string
+) => {
+  try {
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 5;
+    const skip = (page - 1) * limit;
+
+
+    
+
+    const pipeline = [
+      {
+        $match: {
+          userId: new Types.ObjectId(userId),
+          isDelete: false,
+        },
+      },
+
+      {
+        $addFields: {
+          playedDate: {
+            $dateToString: { format: "%Y-%m-%d", date: "$createdAt" },
+          },
+        },
+      },
+
+      {
+        $facet: {
+          // ===== TOTAL STATS =====
+          summary: [
+            {
+              $group: {
+                _id: null,
+                total_games_played: { $sum: 1 },
+                total_time_spent_minutes: {
+                  $sum: { $divide: ["$time_spent_seconds", 60] },
+                },
+                average_score: { $avg: "$score" },
+                best_score: { $max: "$score" },
+              },
+            },
+            {
+              $project: {
+                _id: 0,
+                total_games_played: 1,
+                total_time_spent_minutes: {
+                  $round: ["$total_time_spent_minutes", 0],
+                },
+                average_score: { $round: ["$average_score", 0] },
+                best_score: 1,
+                cognitive_improvement_percentage: {
+                  $round: ["$average_score", 0],
+                },
+                game_performance_percentage: {
+                  $round: ["$average_score", 0],
+                },
+              },
+            },
+          ],
+
+          // ===== CHART DATA =====
+          chart_data: [
+            {
+              $group: {
+                _id: "$playedDate",
+                score: { $avg: "$score" },
+                games_count: { $sum: 1 },
+              },
+            },
+            {
+              $project: {
+                _id: 0,
+                date: "$_id",
+                score: { $round: ["$score", 0] },
+                games_count: 1,
+              },
+            },
+            { $sort: { date: 1 } },
+          ],
+
+          // ===== RECENT SESSIONS (PAGINATED) =====
+          recent_sessions: [
+            { $sort: { createdAt: -1 } },
+            { $skip: skip },
+            { $limit: limit },
+            {
+              $project: {
+                id: "$_id",
+                level: 1,
+                score: 1,
+                correct_count: 1,
+                wrong_count: 1,
+                time_spent_seconds: 1,
+                level_completed: 1,
+                played_at: "$createdAt",
+              },
+            },
+          ],
+
+          // ===== TOTAL COUNT FOR PAGINATION =====
+          recent_sessions_meta: [
+            { $count: "total" }
+          ]
+        },
+      },
+
+      {
+        $project: {
+          data: {
+            $mergeObjects: [
+              { $arrayElemAt: ["$summary", 0] },
+              {
+                chart_data: "$chart_data",
+                recent_sessions: "$recent_sessions",
+                recent_sessions_meta: {
+                  page,
+                  limit,
+                  total: { $ifNull: [{ $arrayElemAt: ["$recent_sessions_meta.total", 0] }, 0] },
+                },
+              },
+            ],
+          },
+        },
+      },
+    ];
+
+    const result = await gameone.aggregate(pipeline as any);
+
+    return result[0];
+  } catch (error: any) {
+    throw new ApiError(
+      httpStatus.SERVICE_UNAVAILABLE,
+      "Tracking summary fetch failed",
+      error
+    );
+  }
+};
+
+
+
+
 const GameOneServices={
     recordedGameOneDataIntoDB,
     myGameLevelIntoDb,
+     trackingSummaryIntoDb,
     deleteGameOneDataIntoDb
 };
 

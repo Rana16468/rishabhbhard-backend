@@ -2,13 +2,17 @@ import { Model, Types } from "mongoose";
 
 export interface TGameOne {
 
-    game: string;
+    game_type: string;
     level:number;
-    stage:number;
+    total_stages_in_level:number;
     userId: Types.ObjectId;
-     wrongs: number;
-     rights: number;
-     time: number;
+     score: number;
+     correct_count: number;
+     wrong_count: number;
+     total_correct_possible:number;
+     time_spent_seconds:number;
+     level_completed: boolean;
+     stage_scores:number[]
      isDelete: boolean;
 
 

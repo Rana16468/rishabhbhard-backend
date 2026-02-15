@@ -1,22 +1,40 @@
 import { model, Schema } from "mongoose";
 import { TGameOne, UserModel } from "./gameone.interface";
 
-/* -------- Schema -------- */
+
 const TGameOneSchema = new Schema<TGameOne, UserModel>(
   {
-    game: { type: String, required: true },
-    level: { type: Number, required: true },
-    stage: { type: Number, required: true },
+    game_type: { type: String, required: [true, 'game type is required'] },
+
+    level: { type: Number, required: [true, 'level is required'] },
+
+    total_stages_in_level: { type: Number, required: true },
+
     userId: { type: Schema.Types.ObjectId, required: true, ref: "users" },
-    wrongs: { type: Number, default: 0 },
-    rights: { type: Number, default: 0 },
-    time: { type: Number, required: true },
+
+    score: { type: Number, required: true },
+
+    correct_count: { type: Number, required: true },
+
+    wrong_count: { type: Number, required: true },
+
+    total_correct_possible: { type: Number, required: true },
+
+    time_spent_seconds: { type: Number, required: true },
+
+    level_completed: { type: Boolean, required: true },
+
+    stage_scores: {
+      type: [Number],
+      required: true,
+      default: [],
+    },
+
     isDelete: { type: Boolean, default: false },
   },
   { timestamps: true }
 );
 
-/* -------- Middleware for soft delete -------- */
 TGameOneSchema.pre("find", function (next) {
   this.find({ isDelete: { $ne: true } });
   next();

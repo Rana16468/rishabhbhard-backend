@@ -2,7 +2,7 @@ import { RequestHandler } from "express";
 import catchAsync from "../../utility/catchAsync";
 import GameOneServices from "./gameone.services";
 import sendRespone from "../../utility/sendRespone";
-import httpStatus from "http-status";
+import httpStatus, { REQUESTED_RANGE_NOT_SATISFIABLE } from "http-status";
 
 
 
@@ -44,13 +44,27 @@ const  deleteGameOneData:RequestHandler=catchAsync(async(req , res)=>{
     data: result
   });
 
+});
+
+
+const  trackingSummary:RequestHandler=catchAsync(async(req , res)=>{
+
+       const result=await GameOneServices.trackingSummaryIntoDb(req.query, req.user.id);
+ sendRespone(res, {
+    success: true,
+    statusCode: httpStatus.OK,
+    message: "Successfully  Tracking Summary",
+    data: result
+  });
+
 })
 
 
 const  GameOneController ={
     recordedGameOneData,
     myGameLevel,
-     deleteGameOneData
+     deleteGameOneData,
+     trackingSummary
 };
 
 export default GameOneController;
