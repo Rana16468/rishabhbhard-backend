@@ -4,7 +4,7 @@ import { TMatchGame } from "./matchgame.interface";
 import matchgames from "./matchgame.model";
 import mongoose, { Types } from "mongoose";
 import catchError from "../../app/error/catchError";
-import QueryBuilder from "../../app/builder/QueryBuilder";
+
 
 const recordedGameOneDataIntoDB = async (
   userId: string,

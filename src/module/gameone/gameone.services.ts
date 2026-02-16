@@ -40,7 +40,7 @@ const myGameLevelIntoDb = async (userId: string) => {
   try {
     const result = await gameone
       .findOne({ userId })          
-      .sort({ createdAt: -1 }).select("game level stage")     
+      .sort({ createdAt: -1 }).select("game level total_stages_in_level")     
       .lean();                   
 
     return result;
