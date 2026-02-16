@@ -95,15 +95,30 @@ const trackingSummaryIntoDb = async (
     const page = Number(query.page) || 1;
     const limit = Number(query.limit) || 5;
     const skip = (page - 1) * limit;
+    const period = query.period as string; // 'week', 'month', 'year', etc.
 
-
+    let dateFilter: any = { isDelete: false };
     
+    if (period === 'week') {
+      const now = new Date();
+      const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      dateFilter.createdAt = { $gte: weekAgo };
+    } else if (period === 'month') {
+      const now = new Date();
+      const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      dateFilter.createdAt = { $gte: monthAgo };
+    } else if (period === 'year') {
+      const now = new Date();
+      const yearAgo = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+      dateFilter.createdAt = { $gte: yearAgo };
+    }
+    // If no period specified, show all data (no date filter)
 
     const pipeline = [
       {
         $match: {
           userId: new Types.ObjectId(userId),
-          isDelete: false,
+          ...dateFilter,
         },
       },
 
@@ -167,7 +182,6 @@ const trackingSummaryIntoDb = async (
             { $sort: { date: 1 } },
           ],
 
-          // ===== RECENT SESSIONS (PAGINATED) =====
           recent_sessions: [
             { $sort: { createdAt: -1 } },
             { $skip: skip },
@@ -186,7 +200,6 @@ const trackingSummaryIntoDb = async (
             },
           ],
 
-          // ===== TOTAL COUNT FOR PAGINATION =====
           recent_sessions_meta: [
             { $count: "total" }
           ]

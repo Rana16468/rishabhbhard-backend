@@ -92,11 +92,39 @@ const trackingSummaryIntoDb = async (
     const page = Number(query.page) || 1;
     const limit = Number(query.limit) || 10;
     const skip = (page - 1) * limit;
+    const period = query.period as string || 'all';
+
+
+    // Calculate date filter based on period
+    let dateFilter: Date | undefined;
+    const now = new Date();
+
+    switch (period) {
+      case 'week':
+        dateFilter = new Date(now.setDate(now.getDate() - 7));
+        break;
+      case 'month':
+        dateFilter = new Date(now.setMonth(now.getMonth() - 1));
+        break;
+      case 'year':
+        dateFilter = new Date(now.setFullYear(now.getFullYear() - 1));
+        break;
+      case 'all':
+      default:
+        dateFilter = undefined;
+        break;
+    }
+
+    // Build match condition
+    const matchCondition: any = { userId: new mongoose.Types.ObjectId(userId) };
+    if (dateFilter) {
+      matchCondition.createdAt = { $gte: dateFilter };
+    }
 
     // Aggregation pipeline for summary statistics
     const summaryPipeline = await matchgames.aggregate([
       {
-        $match: { userId: new mongoose.Types.ObjectId(userId) }
+        $match: matchCondition
       },
       {
         $facet: {
@@ -223,7 +251,6 @@ const trackingSummaryIntoDb = async (
     );
   }
 };
-
 const matchGameServices = {
   recordedGameOneDataIntoDB,
   myGameLevelIntoDb,
