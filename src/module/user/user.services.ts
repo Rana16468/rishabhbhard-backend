@@ -383,16 +383,17 @@ const verificationForgotUserIntoDb = async (
 };
 
 const resetPasswordIntoDb = async (payload: {
-  userId: string;
+  phoneNumber
+: string;
   password: string;
 }) => {
   try {
     const isExistUser = await users.findOne(
       {
         $and: [
-          { _id: payload.userId },
+          { phoneNumber: payload.phoneNumber
+ },
           { isVerify: true },
-          { isDelete: false },
           { status: USER_ACCESSIBILITY.isProgress },
         ],
       },
