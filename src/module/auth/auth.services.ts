@@ -15,14 +15,14 @@ import { sendFileToCloudinary } from "../../utility/sendImageToCloudinary";
 
 
 const loginUserIntoDb = async (payload: {
-  email: string;
+   phoneNumber: string;
   password: string;
   fcm?: string;
   uid?: string;
 }) => {
   // Fetch user by email only
   const user: any = await users.findOne({
-    email: payload.email,
+    phoneNumber: payload.phoneNumber,
     isVerify: true,
     status: USER_ACCESSIBILITY.isProgress,
   }, {
@@ -35,7 +35,7 @@ const loginUserIntoDb = async (payload: {
   if (!user) {
     throw new ApiError(
       httpStatus.NOT_FOUND,
-      `User with email "${payload.email}" not found`, ""
+      `User with email "${payload.phoneNumber}" not found`, ""
     );
   }
 

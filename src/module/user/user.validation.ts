@@ -3,15 +3,15 @@ import { USER_ACCESSIBILITY, USER_ROLE } from './user.constant';
 
  const createUserZodSchema = z.object({
   body: z.object({
-    name: z.string({ required_error: 'User name is Required' }),
+    name: z.string({ required_error: 'User name is Required' }).optional(),
    nickname: z.string({required_error:" nickname is Required"}),
     password: z.string({
       required_error: 'Password is Required',
-    }),
+    }).optional(),
 
     email: z
       .string({ required_error: 'Email is Required' })
-      .email('Invalid email format'),
+      .email('Invalid email format').optional(),
 
     phoneNumber: z
       .string()

@@ -41,8 +41,7 @@ const createUserIntoDb = async (payload: TUser) => {
       {
         $and: [
           {
-            email: payload.email,
-            isDelete: false,
+            email: payload.password,
             isVerify: true,
             status: USER_ACCESSIBILITY.isProgress,
           },
@@ -63,24 +62,25 @@ const createUserIntoDb = async (payload: TUser) => {
         '',
       );
     }
+    payload.isVerify=true;
 
     const authBuilder = new users(payload);
 
     const result = await authBuilder.save({ session });
-    await sendEmail(
-      payload.email,
-      emailcontext.sendvarificationData(
-        payload.email,
-        otp,
-        'User Verification Email',
-      ),
-      'Verification OTP Code',
-    );
+    // await sendEmail(
+    //   payload.email,
+    //   emailcontext.sendvarificationData(
+    //     payload.email,
+    //     otp,
+    //     'User Verification Email',
+    //   ),
+    //   'Verification OTP Code',
+    // );
 
     await session.commitTransaction();
     session.endSession();
 
-    return result && { status: true, message: 'checked your email box' };
+    return result && { status: true, message: 'successfully create a an account' };
   } catch (error: any) {
     await session.abortTransaction();
     session.endSession();

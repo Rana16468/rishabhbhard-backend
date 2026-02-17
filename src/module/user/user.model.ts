@@ -6,13 +6,13 @@ import { TUser, UserModel } from './user.interface';
 
 const TUserSchema = new Schema<TUser, UserModel>(
   {
-    name: { type: String, required: true },
+    name: { type: String, required: false },
     nickname :{type:String, required:true},
     password: { type: String, required: true, select: 0 },
 
     email: {
       type: String,
-      required: true,
+      required: false,
       trim: true,
       index:true
     },
