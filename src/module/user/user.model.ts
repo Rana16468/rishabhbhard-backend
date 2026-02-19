@@ -3,6 +3,7 @@ import { Schema, model } from 'mongoose';
 import config from '../../app/config';
 import { USER_ACCESSIBILITY, USER_ROLE } from './user.constant';
 import { TUser, UserModel } from './user.interface';
+import { boolean } from 'zod';
 
 const TUserSchema = new Schema<TUser, UserModel>(
   {
@@ -59,7 +60,7 @@ const TUserSchema = new Schema<TUser, UserModel>(
     age: { type: String, index:true, required:[true ,'age is required'] },
 
     fcm: { type: String, required:[false , 'fcm is not required'] },
-
+    isTramsAndConditions:{type:Boolean, required:[false ,'isTramsAndConditions is nto required']},
     isDelete: { type: Boolean, default: false },
   },
   {

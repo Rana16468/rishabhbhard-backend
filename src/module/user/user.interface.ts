@@ -23,6 +23,8 @@ export type TUser = {
   hobbies: string[];
   photo?: string;
   fcm?: string;
+  isTramsAndConditions:boolean;
+
   isDelete: boolean;
 };
 

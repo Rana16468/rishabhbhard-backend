@@ -40,7 +40,7 @@ import { USER_ACCESSIBILITY, USER_ROLE } from './user.constant';
       .default(USER_ACCESSIBILITY.isProgress),
 
     photo: z.string().optional(),
-
+    isTramsAndConditions:z.boolean({required_error:"isTramsAndConditions is not required"}).optional(),
     fcm: z.string().optional(),
   }),
 });
