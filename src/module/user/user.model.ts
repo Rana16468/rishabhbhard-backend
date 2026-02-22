@@ -60,7 +60,7 @@ const TUserSchema = new Schema<TUser, UserModel>(
     age: { type: String, index:true, required:[true ,'age is required'] },
 
     fcm: { type: String, required:[false , 'fcm is not required'] },
-    isTramsAndConditions:{type:Boolean, required:[false ,'isTramsAndConditions is nto required']},
+    isTramsAndConditions:{type:Boolean, required:[false ,'isTramsAndConditions is nto required'], default:false},
     isDelete: { type: Boolean, default: false },
   },
   {
