@@ -432,8 +432,7 @@ const googleAuthIntoDb = async (payload: TUser) => {
     let user = await users.findOne(
       {
         email: payload.email,
-        isVerify: true,
-        isDelete: false,
+        isVerify: true
       },
       { _id: 1, role: 1, email: 1, isVerify: 1, },
     );
