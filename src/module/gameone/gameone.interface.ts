@@ -1,25 +1,26 @@
 import { Model, Types } from "mongoose";
 
+export interface TTileClick {
+  spriteName: string;
+  wasCorrect: boolean;
+  clickTime: number; // seconds
+}
+
 export interface TGameOne {
-
-    game_type: string;
-    level:number;
-    total_stages_in_level:number;
-    userId: Types.ObjectId;
-     score: number;
-     correct_count: number;
-     wrong_count: number;
-     total_correct_possible:number;
-     time_spent_seconds:number;
-     level_completed: boolean;
-     stage_scores:number[]
-     isDelete: boolean;
-
-
-};
+  userId: Types.ObjectId;   // or string if not using ObjectId yet
+  gameMode: "OC" | "UOT" | "VF";
+  timestamp: Date;
+  language: string;
+  difficulty: number;
+  stage: number;
+  instructionText: string;
+  completionTime: number; // seconds
+  hintsUsed: number;
+  repeatButtonClicks: number[]; // array of timestamps
+  tileClicks: TTileClick[];
+  isDelete: boolean;
+}
 
 export interface UserModel extends Model<TGameOne> {
   gameOneByCustomId(id: string): Promise<TGameOne | null>;
-
- 
 }

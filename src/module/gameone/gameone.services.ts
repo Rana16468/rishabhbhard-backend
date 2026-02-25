@@ -37,7 +37,7 @@ const myGameLevelIntoDb = async (userId: string) => {
   try {
     const result = await gameone
       .findOne({ userId })          
-      .sort({ createdAt: -1 }).select("game level total_stages_in_level")     
+      .sort({ createdAt: -1 }).select("difficulty stage hintsUsed instructionText")     
       .lean();                   
 
     return result;
@@ -89,27 +89,17 @@ const trackingSummaryIntoDb = async (
   userId: string
 ) => {
   try {
-    const page = Number(query.page) || 1;
-    const limit = Number(query.limit) || 5;
-    const skip = (page - 1) * limit;
-    const period = query.period as string; // 'week', 'month', 'year', etc.
+    const period = query.period as string;
 
     let dateFilter: any = { isDelete: false };
-    
-    if (period === 'week') {
-      const now = new Date();
-      const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-      dateFilter.createdAt = { $gte: weekAgo };
-    } else if (period === 'month') {
-      const now = new Date();
-      const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-      dateFilter.createdAt = { $gte: monthAgo };
-    } else if (period === 'year') {
-      const now = new Date();
-      const yearAgo = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
-      dateFilter.createdAt = { $gte: yearAgo };
+
+    if (period === "week") {
+      dateFilter.createdAt = { $gte: new Date(Date.now() - 7 * 86400000) };
+    } else if (period === "month") {
+      dateFilter.createdAt = { $gte: new Date(Date.now() - 30 * 86400000) };
+    } else if (period === "year") {
+      dateFilter.createdAt = { $gte: new Date(Date.now() - 365 * 86400000) };
     }
-    // If no period specified, show all data (no date filter)
 
     const pipeline = [
       {
@@ -119,113 +109,153 @@ const trackingSummaryIntoDb = async (
         },
       },
 
+      /* ---------- JOIN USER COLLECTION ---------- */
+      {
+        $lookup: {
+          from: "users",
+          localField: "userId",
+          foreignField: "_id",
+          as: "user",
+        },
+      },
+      { $unwind: "$user" },
+
+      /* ---------- Compute accuracy ---------- */
       {
         $addFields: {
-          playedDate: {
-            $dateToString: { format: "%Y-%m-%d", date: "$createdAt" },
+          totalClicks: { $size: "$tileClicks" },
+          correctClicks: {
+            $size: {
+              $filter: {
+                input: "$tileClicks",
+                as: "t",
+                cond: { $eq: ["$$t.wasCorrect", true] },
+              },
+            },
           },
         },
       },
-
       {
-        $facet: {
-          summary: [
-            {
-              $group: {
-                _id: null,
-                total_games_played: { $sum: 1 },
-                total_time_spent_minutes: {
-                  $sum: { $divide: ["$time_spent_seconds", 60] },
-                },
-                average_score: { $avg: "$score" },
-                best_score: { $max: "$score" },
-              },
-            },
-            {
-              $project: {
-                _id: 0,
-                total_games_played: 1,
-                total_time_spent_minutes: {
-                  $round: ["$total_time_spent_minutes", 0],
-                },
-                average_score: { $round: ["$average_score", 0] },
-                best_score: 1,
-                cognitive_improvement_percentage: {
-                  $round: ["$average_score", 0],
-                },
-                game_performance_percentage: {
-                  $round: ["$average_score", 0],
-                },
-              },
-            },
-          ],
-
-          chart_data: [
-            {
-              $group: {
-                _id: "$playedDate",
-                score: { $avg: "$score" },
-                games_count: { $sum: 1 },
-              },
-            },
-            {
-              $project: {
-                _id: 0,
-                date: "$_id",
-                score: { $round: ["$score", 0] },
-                games_count: 1,
-              },
-            },
-            { $sort: { date: 1 } },
-          ],
-
-          recent_sessions: [
-            { $sort: { createdAt: -1 } },
-            { $skip: skip },
-            { $limit: limit },
-            {
-              $project: {
-                id: "$_id",
-                level: 1,
-                score: 1,
-                correct_count: 1,
-                wrong_count: 1,
-                time_spent_seconds: 1,
-                level_completed: 1,
-                played_at: "$createdAt",
-              },
-            },
-          ],
-
-          recent_sessions_meta: [
-            { $count: "total" }
-          ]
-        },
-      },
-
-      {
-        $project: {
-          data: {
-            $mergeObjects: [
-              { $arrayElemAt: ["$summary", 0] },
+        $addFields: {
+          accuracy: {
+            $cond: [
+              { $eq: ["$totalClicks", 0] },
+              0,
               {
-                chart_data: "$chart_data",
-                recent_sessions: "$recent_sessions",
-                recent_sessions_meta: {
-                  page,
-                  limit,
-                  total: { $ifNull: [{ $arrayElemAt: ["$recent_sessions_meta.total", 0] }, 0] },
-                },
+                $multiply: [
+                  { $divide: ["$correctClicks", "$totalClicks"] },
+                  100,
+                ],
               },
             ],
           },
+        },
+      },
+
+      /* ---------- Group by gameMode ---------- */
+      {
+        $group: {
+          _id: "$gameMode",
+
+          userId: { $first: "$user._id" },
+          // userName: { $first: "$user.name" },
+          nickName: { $first: "$user.nickname" },
+
+          highestDifficultyUnlocked: { $max: "$difficulty" },
+          totalRuns: { $sum: 1 },
+          averageCompletionTime: { $avg: "$completionTime" },
+
+          lastRun: { $last: "$$ROOT" },
+          avgAccuracy: { $avg: "$accuracy" },
+        },
+      },
+
+      /* ---------- Rating formula ---------- */
+      {
+        $project: {
+          _id: 0,
+          gameMode: "$_id",
+
+          userId: 1,
+          userName: 1,
+          nickName: 1,
+
+          highestDifficultyUnlocked: 1,
+          totalRuns: 1,
+          averageCompletionTime: { $round: ["$averageCompletionTime", 1] },
+
+          latestRating: {
+            stars: {
+              $round: [
+                {
+                  $divide: [
+                    {
+                      $add: [
+                        { $multiply: ["$avgAccuracy", 0.4] },
+                        {
+                          $multiply: [
+                            { $subtract: [100, "$averageCompletionTime"] },
+                            0.4,
+                          ],
+                        },
+                        { $multiply: [100, 0.2] },
+                      ],
+                    },
+                    20,
+                  ],
+                },
+                0,
+              ],
+            },
+            speedScore: { $round: ["$averageCompletionTime", 1] },
+            accuracyScore: { $round: ["$avgAccuracy", 1] },
+            efficiencyScore: 20,
+          },
+
+          latestAudioTranscription: "$lastRun.instructionText",
+        },
+      },
+
+      /* ---------- Reshape ---------- */
+      {
+        $group: {
+          _id: null,
+          userId: { $first: "$userId" },
+          userName: { $first: "$userName" },
+          nickName: { $first: "$nickName" },
+          data: {
+            $push: {
+              k: "$gameMode",
+              v: {
+                highestDifficultyUnlocked: "$highestDifficultyUnlocked",
+                totalRuns: "$totalRuns",
+                averageCompletionTime: "$averageCompletionTime",
+                latestRating: "$latestRating",
+                latestAudioTranscription: "$latestAudioTranscription",
+              },
+            },
+          },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          userId: 1,
+          userName: 1,
+          nickName: 1,
+          gameProgress: { $arrayToObject: "$data" },
         },
       },
     ];
 
     const result = await gameone.aggregate(pipeline as any);
 
-    return result[0];
+    return result[0] || {
+      userId,
+      userName: null,
+      nickName: null,
+      gameProgress: {},
+    };
   } catch (error: any) {
     throw new ApiError(
       httpStatus.SERVICE_UNAVAILABLE,
@@ -234,7 +264,6 @@ const trackingSummaryIntoDb = async (
     );
   }
 };
-
 
 
 

@@ -1,33 +1,72 @@
 import { model, Schema } from "mongoose";
 import { TGameOne, UserModel } from "./gameone.interface";
 
+/* -------- Sub Schema for tileClicks -------- */
+const TileClickSchema = new Schema(
+  {
+    spriteName: { type: String, required: true },
+    wasCorrect: { type: Boolean, required: true },
+    clickTime: { type: Number, required: true }, // seconds
+  },
+  { _id: false }
+);
 
+/* -------- Main Schema -------- */
 const TGameOneSchema = new Schema<TGameOne, UserModel>(
   {
-    game_type: { type: String, required: [true, 'game type is required'] },
-
-    level: { type: Number, required: [true, 'level is required'] },
-
-    total_stages_in_level: { type: Number, required: true },
-
     userId: { type: Schema.Types.ObjectId, required: true, ref: "users" },
 
-    score: { type: Number, required: true },
+    gameMode: { 
+      type: String, 
+      enum: ["OC", "UOT","VF"], 
+      required: true 
+    },
 
-    correct_count: { type: Number, required: true },
+    timestamp: { 
+      type: Date, 
+      required: true 
+    },
 
-    wrong_count: { type: Number, required: true },
+    language: { 
+      type: String, 
+      required: true 
+    },
 
-    total_correct_possible: { type: Number, required: true },
+    difficulty: { 
+      type: Number, 
+      required: true 
+    },
 
-    time_spent_seconds: { type: Number, required: true },
+    stage: { 
+      type: Number, 
+      required: true 
+    },
 
-    level_completed: { type: Boolean, required: true },
+    instructionText: { 
+      type: String, 
+      required: true 
+    },
 
-    stage_scores: {
-      type: [Number],
-      required: true,
-      default: [],
+    completionTime: { 
+      type: Number, 
+      required: true 
+    },
+
+    hintsUsed: { 
+      type: Number, 
+      required: true, 
+      default: 0 
+    },
+
+    repeatButtonClicks: { 
+      type: [Number], 
+      default: [] 
+    },
+
+    tileClicks: { 
+      type: [TileClickSchema], 
+      required: false, 
+      default: [] 
     },
 
     isDelete: { type: Boolean, default: false },
@@ -35,13 +74,14 @@ const TGameOneSchema = new Schema<TGameOne, UserModel>(
   { timestamps: true }
 );
 
+/* -------- Soft Delete Filters -------- */
 TGameOneSchema.pre("find", function (next) {
   this.find({ isDelete: { $ne: true } });
   next();
 });
 
 TGameOneSchema.pre("findOne", function (next) {
-  this.findOne({ isDelete: { $ne: true } });
+  this.find({ isDelete: { $ne: true } });
   next();
 });
 
