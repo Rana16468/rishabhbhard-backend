@@ -13,9 +13,6 @@ const recordedGameOneDataIntoDB=async(userId:string, payload:TGameOne)=>{
     try{
 
  
-         
-
-       
         const result=await gameone.create({ ...payload, userId});
 
 
@@ -243,7 +240,7 @@ const trackingSummaryIntoDb = async (
 
 const GameOneServices={
     recordedGameOneDataIntoDB,
-    myGameLevelIntoDb,
+    myGameLevelIntoDb,       
      trackingSummaryIntoDb,
     deleteGameOneDataIntoDb
 };
