@@ -18,7 +18,7 @@ const TUserSchema = new Schema<TUser, UserModel>(
       index:true
     },
 
-    phoneNumber: { type: String, required:[false,'phone number is not required'] },
+    phoneNumber: { type: String, required:[false,'phone number is not required'], select:0 },
 
     verificationCode: { type: Number, required:[false, 'verificationCode is not required'], index: true },
 
@@ -79,12 +79,17 @@ TUserSchema.set('toJSON', {
 
 
 TUserSchema.pre('save', async function (next) {
-  if (this.isModified('password')) {
-    this.password = await bcrypt.hash(
-      this.password,
-      Number(config.bcrypt_salt_rounds),
-    );
+  if (!this.isModified('password')) return next();
+
+  if (!this.password) {
+    return next(new Error("Password is required"));
   }
+
+  this.password = await bcrypt.hash(
+    this.password,
+    Number(config.bcrypt_salt_rounds),
+  );
+
   next();
 });
 

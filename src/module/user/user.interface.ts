@@ -11,9 +11,9 @@ export type TUser = {
   nickname:string;
   role: 'user' | 'admin' | 'superAdmin';
   userUniqueId: string;
-  password: string;
+  password?: string;
   email: string;
-  phoneNumber?: string;
+  phoneNumber: string;
   verificationCode?: number;
   gender: 'male' | 'female' | 'others';
   language: string[];

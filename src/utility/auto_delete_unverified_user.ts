@@ -1,13 +1,10 @@
-//auto_delete_verified_user
-
 // auto_delete_unverified_user.ts
 import httpStatus from "http-status";
 import users from "../module/user/user.model";
 import ApiError from "../app/error/ApiError";
 import catchError from "../app/error/catchError";
 
-
-const AUTO_DELETE_MINUTES = 10;
+const AUTO_DELETE_DAYS = 2; // ✅ 2 days
 
 const auto_delete_unverified_user = async (): Promise<{
   deletedCount: number;
@@ -15,7 +12,7 @@ const auto_delete_unverified_user = async (): Promise<{
 }> => {
   try {
     const thresholdTime = new Date(
-      Date.now() - AUTO_DELETE_MINUTES * 60 * 1000
+      Date.now() - AUTO_DELETE_DAYS * 24 * 60 * 60 * 1000 // 2 days in ms
     );
 
     const deleteResult = await users.deleteMany({
@@ -29,15 +26,13 @@ const auto_delete_unverified_user = async (): Promise<{
         "Delete operation failed",
         ""
       );
-    };
-
-    // console.log(deleteResult)
+    }
 
     return {
       deletedCount: deleteResult.deletedCount || 0,
       message:
         deleteResult.deletedCount && deleteResult.deletedCount > 0
-          ? "Unverified users deleted successfully"
+          ? "Unverified users deleted successfully (older than 2 days)"
           : "No unverified users found to delete",
     };
   } catch (error: unknown) {

@@ -104,6 +104,33 @@ const getUserGrowth: RequestHandler = catchAsync(async (req, res) => {
 });
 
 
+const  loginAdminAccount:RequestHandler=catchAsync(async(req , res)=>{
+
+    const result=await AuthServices.loginAdminAccountIntoDb(req.body);
+    sendRespone(res, {
+    success: true,
+    statusCode: httpStatus.OK,
+    message: "Successfully  Login",
+    data: result,
+  });
+
+});
+
+
+
+const   verifiedUser:RequestHandler=catchAsync(async(req , res)=>{
+
+     const result=await AuthServices.verifiedUserIntoDb(req.params.id, req.body);
+    sendRespone(res, {
+    success: true,
+    statusCode: httpStatus.OK,
+    message: "Successfully  Verified",
+    data: result,
+  });
+
+})
+
+
 const AuthController = {
   loginUser,
   refreshToken,
@@ -113,6 +140,8 @@ const AuthController = {
   deleteAccount,
    isBlockAccount,
    getUserGrowth,
+  loginAdminAccount,
+   verifiedUser
     
 
 };

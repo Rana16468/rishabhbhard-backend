@@ -11,6 +11,7 @@ import config from "../../app/config";
 import QueryBuilder from "../../app/builder/QueryBuilder";
 import { TUser } from "../user/user.interface";
 import { sendFileToCloudinary } from "../../utility/sendImageToCloudinary";
+import catchError from "../../app/error/catchError";
 
 
 
@@ -248,9 +249,9 @@ const findByAllUsersAdminIntoDb = async (query: Record<string, unknown>) => {
   try {
     const allUsersdQuery = new QueryBuilder(
       users
-        .find({ isVerify: true, isDelete: false })
+        .find({  })
         .select(
-          "name email phoneNumber location photo recoveryKey  createdAt status",
+          "-password",
         ),
       query,
     )
@@ -419,6 +420,82 @@ const isBlockAccountIntoDb = async (id: string, payload: Partial<TUser>) => {
 };
 
 
+const loginAdminAccountIntoDb = async (payload: Partial<TUser>) => {
+  // Fetch user by email only
+  const user: any = await users.findOne({
+    email:payload.email,
+    isVerify: true,
+    status: USER_ACCESSIBILITY.isProgress,
+  }, {
+    password: 1,
+    email: 1,
+    role: 1,
+    uid: 1
+  });
+
+  if (!user) {
+    throw new ApiError(
+      httpStatus.NOT_FOUND,
+      `User with email "${payload.phoneNumber}" not found`, ""
+    );
+  }
+
+  
+
+  // Update FCM token if provided
+  if (payload.fcm) {
+    await users.updateOne({ _id: user._id }, { $set: { fcm: payload.fcm } });
+  }
+
+  // Validate password
+  const isMatched = await users.isPasswordMatched(payload.password as string, user.password);
+  if (!isMatched) {
+    throw new ApiError(httpStatus.FORBIDDEN, "Password does not match", "");
+  }
+
+  // Generate JWT tokens
+  const jwtPayload = { id: user._id, role: user.role, email: user.email, uid: user.uid };
+  const accessToken = jwtHelpers.generateToken(
+    jwtPayload,
+    config.jwt_access_secret as string,
+    config.expires_in
+  );
+  const refreshToken = jwtHelpers.generateToken(
+    jwtPayload,
+    config.jwt_refresh_secret as string,
+    config.refresh_expires_in
+  );
+
+  return { accessToken, refreshToken };
+};
+
+
+const verifiedUserIntoDb=async(id:string, payload:{
+  isVerify: boolean
+})=>{
+
+  try{
+
+
+      const result=await users.findByIdAndUpdate(id, {isVerify:payload.isVerify},{new:true , upsert:true});
+      if(!result){
+        throw new ApiError(httpStatus.NOT_EXTENDED, 'issues by the user verification section','');
+      };
+
+      return{
+        status:true , 
+        message:"successfully verified"
+      }
+
+  }
+  catch(error){
+    catchError(error);
+  }
+
+
+}
+
+
 
 const AuthServices = {
   loginUserIntoDb,
@@ -430,6 +507,8 @@ const AuthServices = {
 
   getUserGrowthIntoDb,
   isBlockAccountIntoDb,
+  loginAdminAccountIntoDb,
+  verifiedUserIntoDb
 
 };
 

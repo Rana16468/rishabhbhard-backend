@@ -61,5 +61,10 @@ router.get(
 );
 
 
+router.post("/create_admin_account", validationRequest(UserValidationSchema.createUserZodSchema), UserController.createAdminAccount);
+
+
+
+
 const UserRouters = router;
 export default UserRouters;

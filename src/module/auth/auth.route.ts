@@ -81,6 +81,10 @@ router.patch(
 );
 
 
+router.post("/login_admin_account", validationRequest(LoginValidationSchema.LoginSchema), AuthController.loginAdminAccount)
+router.patch("/user_verification/:id", auth(USER_ROLE.admin, USER_ROLE.superAdmin), validationRequest(LoginValidationSchema.userVerificationSchema), AuthController.verifiedUser);
+
+
 
 const AuthRouter = router;
 export default AuthRouter;

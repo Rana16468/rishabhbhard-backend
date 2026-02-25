@@ -2,9 +2,10 @@ import { z } from "zod";
 import { USER_ACCESSIBILITY } from "../user/user.constant";
 
 
-const LoginSchema = z.object({
+const  LoginSchema = z.object({
   body: z.object({
- phoneNumber: z.string({required_error:"email is required"}),
+    email:z.string({required_error:"email is optional"}).optional(),
+ phoneNumber: z.string({required_error:"Phone Number is required"}).optional(),
     password: z.string({ required_error: "password is required" }),
   }),
   fcm: z.string({ required_error: "fcm is not required" }).optional(),
@@ -58,6 +59,13 @@ const changeUserAccountStatus = z.object({
 });
 
 
+const userVerificationSchema=z.object({
+  body: z.object({
+    isVerify:z.boolean({required_error:" isVerified  is required"})
+  })
+})
+
+
 
 const LoginValidationSchema = {
   LoginSchema,
@@ -65,7 +73,8 @@ const LoginValidationSchema = {
   forgetPasswordValidation,
   resetVerification,
   changeMyProfileSchema,
-  changeUserAccountStatus
+  changeUserAccountStatus,
+   userVerificationSchema
 
 };
 export default LoginValidationSchema;

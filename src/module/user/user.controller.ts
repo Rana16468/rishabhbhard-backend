@@ -107,6 +107,19 @@ const getUserGrowth:RequestHandler=catchAsync(async(req , res)=>{
 });
 
 
+const createAdminAccount:RequestHandler=catchAsync(async(req , res)=>{
+
+    const result=await UserServices.createAdminAccountIntoDb(req.body);
+   sendRespone(res, {
+      success: true,
+      statusCode: httpStatus.OK,
+      message: "Successfully  Create Admin Account",
+      data: result,
+  });
+    
+})
+
+
 
 
 const UserController = {
@@ -119,6 +132,7 @@ const UserController = {
   googleAuth,
    resendVerificationOtp,
     getUserGrowth,
+    createAdminAccount
 
 };
 

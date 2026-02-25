@@ -9,6 +9,7 @@ import mongoose from 'mongoose';
 import { jwtHelpers } from '../../app/helper/jwtHelpers';
 import config from '../../app/config';
 import bcrypt from 'bcrypt';
+import catchError from '../../app/error/catchError';
 
 const generateUniqueOTP = async (): Promise<number> => {
   const MAX_ATTEMPTS = 10;
@@ -41,7 +42,7 @@ const createUserIntoDb = async (payload: TUser) => {
       {
         $and: [
           {
-            email: payload.password,
+            phoneNumber: payload.phoneNumber,
             isVerify: true,
             status: USER_ACCESSIBILITY.isProgress,
           },
@@ -163,7 +164,7 @@ const changePasswordIntoDb = async (
         ],
       },
       { password: 1 },
-    );
+    ) as any;
 
     if (!isUserExist) {
       throw new ApiError(httpStatus.NOT_FOUND, 'User not found', '');
@@ -664,6 +665,32 @@ const getUserGrowthIntoDb = async (query: { year?: string }) => {
   }
 };
 
+const createAdminAccountIntoDb=async(payload:Partial<TUser>)=>{
+
+   try{
+
+     const isExistUser=await users.exists({email:payload.email, isVerify:true}).lean();
+     if(isExistUser){
+      throw new ApiError(httpStatus.NOT_EXTENDED, 'this user alredy exist in out system','');
+     };
+
+     const result=await users.create({isVerify:true , ...payload});
+     if(!result){
+         
+      throw new ApiError(httpStatus.NOT_EXTENDED, 'issues by the create admin account section' ,'');
+     };
+     return {
+      status:true , 
+      message:"successfully create an admin account"
+     }
+   }
+   catch(error){
+    catchError(error);
+   }
+
+
+}
+
 const UserServices = {
   createUserIntoDb,
    userVerificationIntoDb ,
@@ -673,7 +700,8 @@ const UserServices = {
    verificationForgotUserIntoDb,
    googleAuthIntoDb ,
     resendVerificationOtpIntoDb,
-     getUserGrowthIntoDb
+     getUserGrowthIntoDb,
+     createAdminAccountIntoDb
 
 
 
