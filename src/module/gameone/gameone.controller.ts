@@ -57,6 +57,18 @@ const  trackingSummary:RequestHandler=catchAsync(async(req , res)=>{
     data: result
   });
 
+});
+
+const findByResearcherUser:RequestHandler=catchAsync(async(req , res)=>{
+
+  const result=await GameOneServices.findByResearcherUserIntoDb(req.user.id, req.query);
+ sendRespone(res, {
+    success: true,
+    statusCode: httpStatus.OK,
+    message: "Successfully  Find By Researcher Data",
+    data: result
+  });
+
 })
 
 
@@ -64,7 +76,8 @@ const  GameOneController ={
     recordedGameOneData,
     myGameLevel,
      deleteGameOneData,
-     trackingSummary
+     trackingSummary,
+     findByResearcherUser
 };
 
 export default GameOneController;

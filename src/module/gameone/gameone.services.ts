@@ -264,6 +264,141 @@ const trackingSummaryIntoDb = async (
     );
   }
 };
+interface IPaginationQuery {
+  page?: number;
+  limit?: number;
+}
+
+const findByResearcherUserIntoDb = async (
+  userId: string,
+  query: IPaginationQuery
+) => {
+  try {
+    const objectUserId = new Types.ObjectId(userId);
+
+    // ✅ safe pagination values
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const result = await gameone.aggregate([
+      {
+        $match: {
+          userId: objectUserId,
+          isDelete: false,
+        },
+      },
+
+      {
+        $lookup: {
+          from: "users",
+          localField: "userId",
+          foreignField: "_id",
+          as: "userInfo",
+        },
+      },
+      { $unwind: { path: "$userInfo", preserveNullAndEmptyArrays: true } },
+
+      {
+        $addFields: {
+          totalClicks: { $size: { $ifNull: ["$tileClicks", []] } },
+          correctClicks: {
+            $size: {
+              $filter: {
+                input: { $ifNull: ["$tileClicks", []] },
+                as: "click",
+                cond: { $eq: ["$$click.wasCorrect", true] },
+              },
+            },
+          },
+        },
+      },
+
+      {
+        $addFields: {
+          accuracyPercentage: {
+            $cond: [
+              { $gt: ["$totalClicks", 0] },
+              {
+                $multiply: [
+                  { $divide: ["$correctClicks", "$totalClicks"] },
+                  100,
+                ],
+              },
+              0,
+            ],
+          },
+        },
+      },
+
+      // ⭐ Pagination + Count
+      {
+        $facet: {
+          data: [
+            { $skip: skip },
+            { $limit: limit },
+            {
+              $project: {
+                _id: 0,
+                sessionId: { $concat: ["sess_", { $toString: "$_id" }] },
+                userId: { $toString: "$userId" },
+
+                userDemographics: {
+                  age: "$userInfo.age",
+                  gender: "$userInfo.gender",
+                  hobbies: "$userInfo.hobbies",
+                  primaryLanguage: "$userInfo.primaryLanguage",
+                  secondaryLanguage: "$userInfo.secondaryLanguage",
+                },
+
+                gameData: {
+                  gameMode: "$gameMode",
+                  timestamp: "$timestamp",
+                  difficulty: "$difficulty",
+                  stage: "$stage",
+                  completionTime: "$completionTime",
+
+                  metrics: {
+                    totalHintsUsed: "$hintsUsed",
+                    totalRepeatInstructions: {
+                      $size: { $ifNull: ["$repeatButtonClicks", []] },
+                    },
+                    accuracyPercentage: {
+                      $round: ["$accuracyPercentage", 2],
+                    },
+                  },
+
+                  rawTileClicks: "$tileClicks",
+                },
+              },
+            },
+          ],
+          totalCount: [{ $count: "count" }],
+        },
+      },
+    ]);
+
+    const data = result[0]?.data || [];
+    const totalRecords = result[0]?.totalCount[0]?.count || 0;
+    const totalPages = Math.ceil(totalRecords / limit);
+
+    return {
+      researchRequestID: `req_${Date.now()}`,
+      exportDate: new Date().toISOString(),
+      currentPage: page,
+      pageSize: limit,
+      totalPages,
+      totalRecords,
+      data,
+    };
+  } catch (error) {
+    catchError(error);
+  }
+};
+
+
+
+
 
 
 
@@ -271,7 +406,8 @@ const GameOneServices={
     recordedGameOneDataIntoDB,
     myGameLevelIntoDb,       
      trackingSummaryIntoDb,
-    deleteGameOneDataIntoDb
+    deleteGameOneDataIntoDb,
+     findByResearcherUserIntoDb
 };
 
 export default GameOneServices;
