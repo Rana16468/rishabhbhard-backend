@@ -333,12 +333,12 @@ const findByResearcherUserIntoDb = async (
   try {
     const objectUserId = new Types.ObjectId(userId);
 
-    // ✅ safe pagination values
     const page = Number(query.page) || 1;
     const limit = Number(query.limit) || 10;
     const skip = (page - 1) * limit;
 
     const result = await gameone.aggregate([
+      // 1️⃣ Match user's non-deleted games
       {
         $match: {
           userId: objectUserId,
@@ -346,16 +346,29 @@ const findByResearcherUserIntoDb = async (
         },
       },
 
+      // 2️⃣ Lookup user info (handles ObjectId/string mismatch)
       {
         $lookup: {
           from: "users",
-          localField: "userId",
-          foreignField: "_id",
+          let: { uid: "$userId" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $or: [
+                    { $eq: ["$_id", "$$uid"] },
+                    { $eq: [{ $toString: "$_id" }, { $toString: "$$uid" }] },
+                  ],
+                },
+              },
+            },
+          ],
           as: "userInfo",
         },
       },
       { $unwind: { path: "$userInfo", preserveNullAndEmptyArrays: true } },
 
+      // 3️⃣ Compute click metrics
       {
         $addFields: {
           totalClicks: { $size: { $ifNull: ["$tileClicks", []] } },
@@ -371,15 +384,21 @@ const findByResearcherUserIntoDb = async (
         },
       },
 
+      // 4️⃣ Compute accuracy percentage
       {
         $addFields: {
           accuracyPercentage: {
             $cond: [
               { $gt: ["$totalClicks", 0] },
               {
-                $multiply: [
-                  { $divide: ["$correctClicks", "$totalClicks"] },
-                  100,
+                $round: [
+                  {
+                    $multiply: [
+                      { $divide: ["$correctClicks", "$totalClicks"] },
+                      100,
+                    ],
+                  },
+                  2,
                 ],
               },
               0,
@@ -388,70 +407,82 @@ const findByResearcherUserIntoDb = async (
         },
       },
 
-      // ⭐ Pagination + Count
+      // 5️⃣ Shape each session document
       {
-        $facet: {
-          data: [
-            { $skip: skip },
-            { $limit: limit },
-            {
-              $project: {
-                _id: 0,
-                sessionId: { $concat: ["sess_", { $toString: "$_id" }] },
-                userId: { $toString: "$userId" },
-
-                userDemographics: {
-                  age: "$userInfo.age",
-                  gender: "$userInfo.gender",
-                  hobbies: "$userInfo.hobbies",
-                  primaryLanguage: "$userInfo.primaryLanguage",
-                  secondaryLanguage: "$userInfo.secondaryLanguage",
-                },
-
-                gameData: {
-                  gameMode: "$gameMode",
-                  timestamp: "$timestamp",
-                  difficulty: "$difficulty",
-                  stage: "$stage",
-                  completionTime: "$completionTime",
-
-                  metrics: {
-                    totalHintsUsed: "$hintsUsed",
-                    totalRepeatInstructions: {
-                      $size: { $ifNull: ["$repeatButtonClicks", []] },
-                    },
-                    accuracyPercentage: {
-                      $round: ["$accuracyPercentage", 2],
-                    },
-                  },
-
-                  rawTileClicks: "$tileClicks",
-                },
+        $project: {
+          _id: 0,
+          gameMode: "$gameMode",
+          sessionId: { $concat: ["sess_", { $toString: "$_id" }] },
+          userId: { $concat: ["usr_", { $toString: "$userId" }] },
+          userDemographics: {
+            age: "$userInfo.age",
+            gender: "$userInfo.gender",
+            hobbies: "$userInfo.hobbies",
+            primaryLanguage: { $arrayElemAt: ["$userInfo.language", 0] },
+            secondaryLanguage: { $arrayElemAt: ["$userInfo.language", 1] },
+          },
+          gameData: {
+            gameMode: "$gameMode",
+            timestamp: "$timestamp",
+            difficulty: "$difficulty",
+            stage: "$stage",
+            completionTime: "$completionTime",
+            metrics: {
+              totalHintsUsed: "$hintsUsed",
+              totalRepeatInstructions: {
+                $size: { $ifNull: ["$repeatButtonClicks", []] },
               },
+              accuracyPercentage: "$accuracyPercentage",
             },
-          ],
-          totalCount: [{ $count: "count" }],
+            rawTileClicks: "$tileClicks",
+          },
         },
       },
-    ]);
 
-    const data = result[0]?.data || [];
-    const totalRecords = result[0]?.totalCount[0]?.count || 0;
-    const totalPages = Math.ceil(totalRecords / limit);
+      // 6️⃣ Group sessions by gameMode
+      {
+        $group: {
+          _id: "$gameMode",
+          sessions: { $push: "$$ROOT" },
+          totalRecords: { $sum: 1 },
+        },
+      },
+
+      // 7️⃣ Paginate sessions inside each gameMode + final shape
+      {
+        $project: {
+          _id: 0,
+          gameMode: "$_id",
+          totalRecords: 1,
+          totalPages: {
+            $ceil: { $divide: ["$totalRecords", limit] },
+          },
+          currentPage: { $literal: page },
+          pageSize: { $literal: limit },
+          data: {
+            $slice: ["$sessions", skip, limit],
+          },
+        },
+      },
+
+      // 8️⃣ Sort game modes consistently
+      {
+        $sort: { gameMode: 1 },
+      },
+    ]);
 
     return {
       researchRequestID: `req_${Date.now()}`,
       exportDate: new Date().toISOString(),
       currentPage: page,
       pageSize: limit,
-      totalPages,
-      totalRecords,
-      data,
+      gameWiseData: result,
     };
   } catch (error) {
     catchError(error);
   }
 };
+
 
 
 

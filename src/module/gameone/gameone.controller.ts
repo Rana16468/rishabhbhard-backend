@@ -61,7 +61,7 @@ const  trackingSummary:RequestHandler=catchAsync(async(req , res)=>{
 
 const findByResearcherUser:RequestHandler=catchAsync(async(req , res)=>{
 
-  const result=await GameOneServices.findByResearcherUserIntoDb(req.user.id, req.query);
+  const result=await GameOneServices.findByResearcherUserIntoDb(req.params.userId, req.query);
  sendRespone(res, {
     success: true,
     statusCode: httpStatus.OK,
