@@ -1,8 +1,9 @@
 import { model, Schema } from "mongoose";
-import { TGameOne, UserModel } from "./gameone.interface";
+import { TGameOne ,TTileClick } from "./gameone.interface";
+import { UserModel } from "../user/user.interface";
 
-/* -------- Sub Schema for tileClicks -------- */
-const TileClickSchema = new Schema(
+
+const TileClickSchema = new Schema<TTileClick>(
   {
     spriteName: { type: String, required: true },
     wasCorrect: { type: Boolean, required: true },
@@ -11,21 +12,17 @@ const TileClickSchema = new Schema(
   { _id: false }
 );
 
-/* -------- Main Schema -------- */
+
 const TGameOneSchema = new Schema<TGameOne, UserModel>(
   {
     userId: { type: Schema.Types.ObjectId, required: true, ref: "users" },
 
     gameMode: { 
       type: String, 
-      enum: ["OC", "UOT","VF"], 
+      enum: ["OC", "UOT", "VF"], 
       required: true 
     },
 
-    timestamp: { 
-      type: Date, 
-      required: true 
-    },
 
     language: { 
       type: String, 
@@ -48,24 +45,43 @@ const TGameOneSchema = new Schema<TGameOne, UserModel>(
     },
 
     completionTime: { 
-      type: Number, 
-      required: true 
+      type: Number,
+      required: function(this: any) { return this.gameMode === "OC" || this.gameMode === "UOT"; }
     },
 
     hintsUsed: { 
       type: Number, 
-      required: true, 
-      default: 0 
-    },
-
-    repeatButtonClicks: { 
-      type: [Number], 
-      default: [] 
+      default: 0,
+      required: function(this: any) { return this.gameMode === "OC" || this.gameMode === "UOT"; }
     },
 
     tileClicks: { 
       type: [TileClickSchema], 
-      required: false, 
+      default: [],
+      required: function(this: any) { return this.gameMode === "OC" || this.gameMode === "UOT"; }
+    },
+
+    audioClipId: {
+      type: String,
+      required: function(this: any) { return this.gameMode === "VF"; }
+    },
+      audioClipUrl:{
+        type:String,
+        required:[false ,'audioClipUrl is not required'],
+        default: null
+
+      },
+    recordingId: {
+      type: String,
+      required: function(this: any) { return this.gameMode === "VF"; }
+    },
+    playerResponse: {
+      type: String,
+      required: function(this: any) { return this.gameMode === "VF"; }
+    },
+
+    repeatButtonClicks: { 
+      type: [Number], 
       default: [] 
     },
 
@@ -74,7 +90,6 @@ const TGameOneSchema = new Schema<TGameOne, UserModel>(
   { timestamps: true }
 );
 
-/* -------- Soft Delete Filters -------- */
 TGameOneSchema.pre("find", function (next) {
   this.find({ isDelete: { $ne: true } });
   next();

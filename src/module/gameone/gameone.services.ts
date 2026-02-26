@@ -1,38 +1,41 @@
 import httpStatus from "http-status";
 import catchError from "../../app/error/catchError";
-import { TGameOne } from "./gameone.interface";
 import gameone from "./gameone.model";
 import ApiError from "../../app/error/ApiError";
-import QueryBuilder from "../../app/builder/QueryBuilder";
 import { Types } from "mongoose";
+import { Request } from "express";
 
 
 
-const recordedGameOneDataIntoDB=async(userId:string, payload:TGameOne)=>{
+const recordedGameOneDataIntoDB = async (userId: string, req: Request) => {
+  try {
+    const file = req.file;
+    const bodyData = req.body;
 
-    try{
+    // Prepare the payload
+    const payload = {
+      userId,
+      ...bodyData,
+      ...(file?.path && { audioClipUrl: file.path.replace(/\\/g, "/") }),
+    };
 
- 
-        const result=await gameone.create({ ...payload, userId});
+    const result = await gameone.create(payload);
 
-
-        if(!result){
-            throw new ApiError(httpStatus.NOT_EXTENDED,'issues by the game one  recorded data ','')
-        };
-
-        return {
-            status: true , 
-             message:"successfully recorded"
-        }
-
+    if (!result) {
+      throw new ApiError(
+        httpStatus.NOT_EXTENDED,
+        file?.path
+          ? "Issues in the speak game recorded section"
+          : "Issues in the find and match game recorded section",
+        ""
+      );
     }
-    catch(error){
-        catchError(error);
-    }
 
-      ;
+    return { status: true, message: "Successfully recorded" };
+  } catch (error) {
+    catchError(error);
+  }
 };
-
 const myGameLevelIntoDb = async (userId: string) => {
   try {
     const result = await gameone
@@ -89,141 +92,198 @@ const trackingSummaryIntoDb = async (
   userId: string
 ) => {
   try {
-    const period = query.period as string;
+    const objectUserId = new Types.ObjectId(userId);
 
-    let dateFilter: any = { isDelete: false };
-
-    if (period === "week") {
-      dateFilter.createdAt = { $gte: new Date(Date.now() - 7 * 86400000) };
-    } else if (period === "month") {
-      dateFilter.createdAt = { $gte: new Date(Date.now() - 30 * 86400000) };
-    } else if (period === "year") {
-      dateFilter.createdAt = { $gte: new Date(Date.now() - 365 * 86400000) };
-    }
-
-    const pipeline = [
+    const result = await gameone.aggregate([
+      // 1️⃣ Match only this user's games
       {
         $match: {
-          userId: new Types.ObjectId(userId),
-          ...dateFilter,
+          userId: objectUserId,
         },
       },
 
-      /* ---------- JOIN USER COLLECTION ---------- */
+      // 2️⃣ Lookup user info — handle both ObjectId and string userId
       {
         $lookup: {
           from: "users",
-          localField: "userId",
-          foreignField: "_id",
-          as: "user",
-        },
-      },
-      { $unwind: "$user" },
-
-      /* ---------- Compute accuracy ---------- */
-      {
-        $addFields: {
-          totalClicks: { $size: "$tileClicks" },
-          correctClicks: {
-            $size: {
-              $filter: {
-                input: "$tileClicks",
-                as: "t",
-                cond: { $eq: ["$$t.wasCorrect", true] },
+          let: { uid: "$userId" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $or: [
+                    { $eq: ["$_id", "$$uid"] },
+                    { $eq: [{ $toString: "$_id" }, { $toString: "$$uid" }] },
+                  ],
+                },
               },
             },
-          },
+          ],
+          as: "userInfo",
         },
       },
+      { $unwind: { path: "$userInfo", preserveNullAndEmptyArrays: true } },
+
+      // 3️⃣ Group by gameMode
       {
-        $addFields: {
-          accuracy: {
+        $group: {
+          _id: "$gameMode",
+          highestDifficultyUnlocked: { $max: "$difficulty" },
+          totalRuns: { $sum: 1 },
+          avgCompletionTime: { $avg: "$completionTime" },
+          latestGame: { $last: "$$ROOT" },
+          // ✅ Capture userId and userName at group level directly
+          userId: { $first: "$userId" },
+          userName: { $first: "$userInfo.nickname" },
+        },
+      },
+
+      // 4️⃣ Project compact summary per gameMode
+      {
+        $project: {
+          _id: 0,
+          gameMode: "$_id",
+          userId: 1,       // ✅ from group stage
+          userName: 1,     // ✅ from group stage
+          highestDifficultyUnlocked: 1,
+          totalRuns: 1,
+          averageCompletionTime: { $round: ["$avgCompletionTime", 2] },
+          latestRating: {
             $cond: [
-              { $eq: ["$totalClicks", 0] },
-              0,
+              { $in: ["$_id", ["OC", "UOT"]] },
               {
-                $multiply: [
-                  { $divide: ["$correctClicks", "$totalClicks"] },
-                  100,
-                ],
+                stars: {
+                  $round: [
+                    {
+                      $multiply: [
+                        {
+                          $cond: [
+                            {
+                              $gt: [
+                                { $size: { $ifNull: ["$latestGame.tileClicks", []] } },
+                                0,
+                              ],
+                            },
+                            {
+                              $divide: [
+                                {
+                                  $size: {
+                                    $filter: {
+                                      input: { $ifNull: ["$latestGame.tileClicks", []] },
+                                      as: "click",
+                                      cond: { $eq: ["$$click.wasCorrect", true] },
+                                    },
+                                  },
+                                },
+                                { $size: { $ifNull: ["$latestGame.tileClicks", []] } },
+                              ],
+                            },
+                            0,
+                          ],
+                        },
+                        5,
+                      ],
+                    },
+                    0,
+                  ],
+                },
+                speedScore: {
+                  $round: [
+                    { $subtract: [100, { $ifNull: ["$latestGame.completionTime", 0] }] },
+                    2,
+                  ],
+                },
+                accuracyScore: {
+                  $round: [
+                    {
+                      $multiply: [
+                        {
+                          $cond: [
+                            {
+                              $gt: [
+                                { $size: { $ifNull: ["$latestGame.tileClicks", []] } },
+                                0,
+                              ],
+                            },
+                            {
+                              $divide: [
+                                {
+                                  $size: {
+                                    $filter: {
+                                      input: { $ifNull: ["$latestGame.tileClicks", []] },
+                                      as: "click",
+                                      cond: { $eq: ["$$click.wasCorrect", true] },
+                                    },
+                                  },
+                                },
+                                { $size: { $ifNull: ["$latestGame.tileClicks", []] } },
+                              ],
+                            },
+                            0,
+                          ],
+                        },
+                        100,
+                      ],
+                    },
+                    2,
+                  ],
+                },
+                efficiencyScore: {
+                  $round: [
+                    {
+                      $multiply: [
+                        {
+                          $cond: [
+                            {
+                              $gt: [
+                                { $size: { $ifNull: ["$latestGame.tileClicks", []] } },
+                                0,
+                              ],
+                            },
+                            {
+                              $divide: [
+                                {
+                                  $size: {
+                                    $filter: {
+                                      input: { $ifNull: ["$latestGame.tileClicks", []] },
+                                      as: "click",
+                                      cond: { $eq: ["$$click.wasCorrect", true] },
+                                    },
+                                  },
+                                },
+                                { $size: { $ifNull: ["$latestGame.tileClicks", []] } },
+                              ],
+                            },
+                            0,
+                          ],
+                        },
+                        100,
+                      ],
+                    },
+                    2,
+                  ],
+                },
               },
+              "$$REMOVE",
+            ],
+          },
+          latestAudioTranscription: {
+            $cond: [
+              { $eq: ["$_id", "VF"] },
+              "$latestGame.playerResponse",
+              "$$REMOVE",
             ],
           },
         },
       },
 
-      /* ---------- Group by gameMode ---------- */
-      {
-        $group: {
-          _id: "$gameMode",
-
-          userId: { $first: "$user._id" },
-          // userName: { $first: "$user.name" },
-          nickName: { $first: "$user.nickname" },
-
-          highestDifficultyUnlocked: { $max: "$difficulty" },
-          totalRuns: { $sum: 1 },
-          averageCompletionTime: { $avg: "$completionTime" },
-
-          lastRun: { $last: "$$ROOT" },
-          avgAccuracy: { $avg: "$accuracy" },
-        },
-      },
-
-      /* ---------- Rating formula ---------- */
-      {
-        $project: {
-          _id: 0,
-          gameMode: "$_id",
-
-          userId: 1,
-          userName: 1,
-          nickName: 1,
-
-          highestDifficultyUnlocked: 1,
-          totalRuns: 1,
-          averageCompletionTime: { $round: ["$averageCompletionTime", 1] },
-
-          latestRating: {
-            stars: {
-              $round: [
-                {
-                  $divide: [
-                    {
-                      $add: [
-                        { $multiply: ["$avgAccuracy", 0.4] },
-                        {
-                          $multiply: [
-                            { $subtract: [100, "$averageCompletionTime"] },
-                            0.4,
-                          ],
-                        },
-                        { $multiply: [100, 0.2] },
-                      ],
-                    },
-                    20,
-                  ],
-                },
-                0,
-              ],
-            },
-            speedScore: { $round: ["$averageCompletionTime", 1] },
-            accuracyScore: { $round: ["$avgAccuracy", 1] },
-            efficiencyScore: 20,
-          },
-
-          latestAudioTranscription: "$lastRun.instructionText",
-        },
-      },
-
-      /* ---------- Reshape ---------- */
+      // 5️⃣ Reformat into user-level object
       {
         $group: {
           _id: null,
           userId: { $first: "$userId" },
           userName: { $first: "$userName" },
-          nickName: { $first: "$nickName" },
-          data: {
+          gameProgress: {
             $push: {
               k: "$gameMode",
               v: {
@@ -237,33 +297,30 @@ const trackingSummaryIntoDb = async (
           },
         },
       },
+
+      // 6️⃣ Final shape
       {
         $project: {
           _id: 0,
-          userId: 1,
+          userId: { $concat: ["usr_", { $toString: "$userId" }] },
           userName: 1,
-          nickName: 1,
-          gameProgress: { $arrayToObject: "$data" },
+          gameProgress: { $arrayToObject: "$gameProgress" },
         },
       },
-    ];
+    ]);
 
-    const result = await gameone.aggregate(pipeline as any);
-
-    return result[0] || {
-      userId,
-      userName: null,
-      nickName: null,
-      gameProgress: {},
-    };
-  } catch (error: any) {
-    throw new ApiError(
-      httpStatus.SERVICE_UNAVAILABLE,
-      "Tracking summary fetch failed",
-      error
-    );
+    return result[0] || { userId: `usr_${userId}`, gameProgress: {} };
+  } catch (error) {
+    catchError(error);
   }
 };
+
+interface IPaginationQuery {
+  page?: number;
+  limit?: number;
+}
+
+
 interface IPaginationQuery {
   page?: number;
   limit?: number;

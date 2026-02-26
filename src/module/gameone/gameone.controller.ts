@@ -8,7 +8,7 @@ import httpStatus, { REQUESTED_RANGE_NOT_SATISFIABLE } from "http-status";
 
 const  recordedGameOneData:RequestHandler=catchAsync(async(req , res)=>{
 
-       const result=await GameOneServices.recordedGameOneDataIntoDB(req.user.id, req.body);
+       const result=await GameOneServices.recordedGameOneDataIntoDB(req.user.id, req);
 
         sendRespone(res, {
     success: true,
