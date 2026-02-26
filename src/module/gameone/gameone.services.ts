@@ -38,10 +38,44 @@ const recordedGameOneDataIntoDB = async (userId: string, req: Request) => {
 };
 const myGameLevelIntoDb = async (userId: string) => {
   try {
-    const result = await gameone
-      .findOne({ userId })          
-      .sort({ createdAt: -1 }).select("difficulty stage hintsUsed instructionText")     
-      .lean();                   
+    const objectUserId = new Types.ObjectId(userId);
+
+    const result = await gameone.aggregate([
+      {
+        $match: {
+          userId: objectUserId
+          
+        },
+      },
+
+      {
+        $sort: { createdAt: -1 },
+      },
+      {
+        $group: {
+          _id: "$gameMode",
+          difficulty: { $first: "$difficulty" },
+          stage: { $first: "$stage" },
+          hintsUsed: { $first: "$hintsUsed" },
+          instructionText: { $first: "$instructionText" },
+          createdAt: { $first: "$createdAt" },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          gameMode: "$_id",
+          difficulty: 1,
+          stage: 1,
+          hintsUsed: 1,
+          instructionText: 1,
+          createdAt: 1,
+        },
+      },
+      {
+        $sort: { gameMode: 1 },
+      },
+    ]);
 
     return result;
   } catch (error) {
@@ -321,10 +355,6 @@ interface IPaginationQuery {
 }
 
 
-interface IPaginationQuery {
-  page?: number;
-  limit?: number;
-}
 
 const findByResearcherUserIntoDb = async (
   userId: string,
