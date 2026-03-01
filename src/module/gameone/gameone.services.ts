@@ -83,10 +83,6 @@ const myGameLevelIntoDb = async (userId: string) => {
   }
 };
 
-
-
-
-
 const deleteGameOneDataIntoDb = async (userId: string, id: string) => {
   try {
     // Check if document exists for this user
