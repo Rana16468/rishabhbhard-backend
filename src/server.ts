@@ -5,6 +5,7 @@ import config from "./app/config";
 
 import httpStatus from "http-status";
 import ApiError from "./app/error/ApiError";
+import { connectSocket } from "./socket/connectSocket";
 
 
 let server: Server;
@@ -51,6 +52,9 @@ async function main() {
     server = app.listen(config.port, () => {
       console.log(`🚀 Server running on http://${config.host}:${config.port}`);
     });
+
+     // Initialize Socket only once
+    connectSocket(server);
 
 
 
