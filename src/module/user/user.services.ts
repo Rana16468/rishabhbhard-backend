@@ -63,7 +63,7 @@ const createUserIntoDb = async (payload: TUser) => {
         '',
       );
     }
-    payload.isVerify=true;
+    payload.isVerify=false;
 
     const authBuilder = new users(payload);
 

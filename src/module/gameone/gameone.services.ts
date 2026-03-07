@@ -459,6 +459,7 @@ const findByResearcherUserIntoDb = async (
                 $size: { $ifNull: ["$repeatButtonClicks", []] },
               },
               accuracyPercentage: "$accuracyPercentage",
+              instructionText: "$instructionText", // ✅ new field added
             },
             rawTileClicks: "$tileClicks",
           },

@@ -24,14 +24,23 @@ const loginUserIntoDb = async (payload: {
   // Fetch user by email only
   const user: any = await users.findOne({
     phoneNumber: payload.phoneNumber,
-    isVerify: true,
+
     status: USER_ACCESSIBILITY.isProgress,
   }, {
     password: 1,
     email: 1,
     role: 1,
-    uid: 1
+    uid: 1,
+    vanityUrl:1,
+    isVerify:1
   });
+  if(user && !user.isVerify){
+    throw new ApiError(
+      httpStatus.FORBIDDEN,
+      "User is not verified please contact us admin for verification",
+      ""
+    );
+  }
 
   if (!user) {
     throw new ApiError(
@@ -281,7 +290,6 @@ const deleteAccountIntoDb = async (id: string) => {
     const user = await users
       .findOne({
         _id: id,
-        isDelete: false,
         isVerify: true,
         status: USER_ACCESSIBILITY.isProgress,
       })
@@ -293,7 +301,8 @@ const deleteAccountIntoDb = async (id: string) => {
 
     if (user.role === USER_ROLE.superAdmin) {
       throw new ApiError(httpStatus.FORBIDDEN, "Super Admin cannot be deleted.", "");
-    }
+    };
+    
 
 
    

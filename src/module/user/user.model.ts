@@ -3,7 +3,7 @@ import { Schema, model } from 'mongoose';
 import config from '../../app/config';
 import { USER_ACCESSIBILITY, USER_ROLE } from './user.constant';
 import { TUser, UserModel } from './user.interface';
-import { boolean } from 'zod';
+
 
 const TUserSchema = new Schema<TUser, UserModel>(
   {
@@ -18,7 +18,7 @@ const TUserSchema = new Schema<TUser, UserModel>(
       index:true
     },
 
-    phoneNumber: { type: String, required:[false,'phone number is not required'], select:0 },
+    phoneNumber: { type: String, required:[false,'phone number is not required'] },
 
     verificationCode: { type: Number, required:[false, 'verificationCode is not required'], index: true },
 
