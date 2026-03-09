@@ -54,14 +54,28 @@ const trackingMySpeakSummary:RequestHandler=catchAsync(async(req , res)=>{
     data: result
   });
 
-})
+});
 
+
+
+const gameGraph:RequestHandler=catchAsync(async(req , res)=>{   
+
+ const result=await speakGameServices.gameGraphIntoDb(req.query);
+      sendRespone(res, {
+    success: true,
+    statusCode: httpStatus.OK,
+    message: "Successfully Find My Graph  Summery",
+    data: result
+  });
+
+});
 
 const speakGameController={
     recordedSpeakGameData,
      myGameLevel,
      deleteSpeakGame,
-     trackingMySpeakSummary
+     trackingMySpeakSummary,
+     gameGraph
 };
 
 export default speakGameController;

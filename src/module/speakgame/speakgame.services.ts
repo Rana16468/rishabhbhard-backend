@@ -5,6 +5,7 @@ import ApiError from "../../app/error/ApiError";
 import httpStatus from "http-status";
 import catchError from "../../app/error/catchError";
 import QueryBuilder from "../../app/builder/QueryBuilder";
+import gameone from "../gameone/gameone.model";
 
 const recordedSpeakGameDataIntoDB = async (
   userId: string,
@@ -266,13 +267,169 @@ const trackingSpeakSummaryIntoDb = async (
 
 
 
+const gameGraphIntoDb = async (query: { year?: string; gameMode?: string }) => {
+  try {
+    const year = query.year ? parseInt(query.year) : new Date().getFullYear();
+    const previousYear = year - 1;
+
+    const gameModeFilter = query.gameMode ? { gameMode: query.gameMode } : {};
+
+    // ─── Current year: group by month ───
+    const currentYearStats = await gameone.aggregate([
+      {
+        $match: {
+          isDelete: false,
+          ...gameModeFilter,
+          createdAt: {
+            $gte: new Date(`${year}-01-01T00:00:00.000Z`),
+            $lte: new Date(`${year}-12-31T23:59:59.999Z`),
+          },
+        },
+      },
+      {
+        $group: {
+          _id: { month: { $month: "$createdAt" } },
+          totalSessions: { $sum: 1 },
+          totalHintsUsed: { $sum: "$hintsUsed" },
+          avgCompletionTime: { $avg: { $ifNull: ["$completionTime", 0] } },
+          totalCorrectClicks: {
+            $sum: {
+              $size: {
+                $filter: {
+                  input: { $ifNull: ["$tileClicks", []] },
+                  as: "click",
+                  cond: { $eq: ["$$click.wasCorrect", true] },
+                },
+              },
+            },
+          },
+          totalWrongClicks: {
+            $sum: {
+              $size: {
+                $filter: {
+                  input: { $ifNull: ["$tileClicks", []] },
+                  as: "click",
+                  cond: { $eq: ["$$click.wasCorrect", false] },
+                },
+              },
+            },
+          },
+          totalRepeatButtonClicks: {
+            $sum: { $size: { $ifNull: ["$repeatButtonClicks", []] } },
+          },
+          // ✅ NEW: collect unique userIds who played this month
+          uniqueUserIds: { $addToSet: "$userId" },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          month: "$_id.month",
+          totalSessions: 1,
+          totalHintsUsed: 1,
+          avgCompletionTime: { $round: ["$avgCompletionTime", 2] },
+          totalCorrectClicks: 1,
+          totalWrongClicks: 1,
+          totalRepeatButtonClicks: 1,
+          // ✅ NEW: count the unique users
+          totalUniqueUsers: { $size: "$uniqueUserIds" },
+        },
+      },
+    ]);
+
+    // ─── Previous year: total sessions only ───
+    const previousYearStats = await gameone.aggregate([
+      {
+        $match: {
+          isDelete: false,
+          ...gameModeFilter,
+          createdAt: {
+            $gte: new Date(`${previousYear}-01-01T00:00:00.000Z`),
+            $lte: new Date(`${previousYear}-12-31T23:59:59.999Z`),
+          },
+        },
+      },
+      { $count: "totalSessions" },
+    ]);
+
+    // ─── Build full 12-month array in JavaScript ───
+    const monthlyStats = Array.from({ length: 12 }, (_, i) => {
+      const monthNum = i + 1;
+      const found = currentYearStats.find((d: any) => d.month === monthNum);
+
+      const totalCorrect = found?.totalCorrectClicks ?? 0;
+      const totalWrong = found?.totalWrongClicks ?? 0;
+      const totalClicks = totalCorrect + totalWrong;
+      const accuracy =
+        totalClicks > 0
+          ? parseFloat(((totalCorrect / totalClicks) * 100).toFixed(2))
+          : 0;
+
+      return {
+        year,
+        month: monthNum,
+        totalSessions: found?.totalSessions ?? 0,
+        totalHintsUsed: found?.totalHintsUsed ?? 0,
+        avgCompletionTime: found?.avgCompletionTime ?? 0,
+        totalCorrectClicks: totalCorrect,
+        totalWrongClicks: totalWrong,
+        totalRepeatButtonClicks: found?.totalRepeatButtonClicks ?? 0,
+        accuracyRate: accuracy,
+        // ✅ NEW: how many unique users completed sessions this month
+        totalUniqueUsers: found?.totalUniqueUsers ?? 0,
+      };
+    });
+
+    // ─── Overall totals across the year ───
+    const totalSessions = monthlyStats.reduce((s, m) => s + m.totalSessions, 0);
+    const totalCorrect = monthlyStats.reduce((s, m) => s + m.totalCorrectClicks, 0);
+    const totalWrong = monthlyStats.reduce((s, m) => s + m.totalWrongClicks, 0);
+    const totalClicks = totalCorrect + totalWrong;
+    const overallAccuracy =
+      totalClicks > 0
+        ? parseFloat(((totalCorrect / totalClicks) * 100).toFixed(2))
+        : 0;
+
+    // ─── Year-over-year session growth % ───
+    const currentYearTotal = totalSessions;
+    const previousYearTotal = previousYearStats[0]?.totalSessions ?? 0;
+
+    let yearlyGrowth = 0;
+    if (previousYearTotal > 0) {
+      yearlyGrowth = parseFloat(
+        (((currentYearTotal - previousYearTotal) / previousYearTotal) * 100).toFixed(2)
+      );
+    } else if (currentYearTotal > 0) {
+      yearlyGrowth = 100;
+    }
+
+    return {
+      year,
+      totalSessions,
+      totalCorrectClicks: totalCorrect,
+      totalWrongClicks: totalWrong,
+      overallAccuracy,
+      yearlyGrowth,
+      monthlyStats,
+    };
+  } catch (error: any) {
+    throw new ApiError(
+      httpStatus.INTERNAL_SERVER_ERROR,
+      "Failed to fetch game graph stats",
+      error
+    );
+  }
+};
+
+
 
 
 const speakGameServices = {
   recordedSpeakGameDataIntoDB,
    myGameLevelIntoDb,
    deleteSpeakGameIntoDb,
-   trackingSpeakSummaryIntoDb
+   trackingSpeakSummaryIntoDb,
+    gameGraphIntoDb
 };
 
 export default speakGameServices;

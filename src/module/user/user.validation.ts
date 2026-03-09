@@ -103,7 +103,7 @@ const verificationCodeSchema = z.object({
 
 const resetPasswordSchema = z.object({
   body: z.object({
-    phoneNumber: z.string({ required_error: 'phone number is require' }),
+    userId: z.string({ required_error: 'phone number is require' }),
     password: z.string({ required_error: 'password is require' }),
   }),
 });

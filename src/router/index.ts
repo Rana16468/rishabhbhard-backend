@@ -6,6 +6,7 @@ import ChatBotRouter from '../module/chatbot/chatbot.route';
 import gameOneRoute from '../module/gameone/gameone.route';
 import matchGameRoute from '../module/matchgame/matchgame.route';
 import speakGameRoute from '../module/speakgame/speakgame.route';
+import SettingsRoutes from '../module/settings/settings.routres';
 
 
 const router = express.Router();
@@ -16,7 +17,8 @@ const moduleRouth = [
   {path:"/chatbot", route: ChatBotRouter},
   {path:"/game_one", route: gameOneRoute},
   {path:"/match_game", route: matchGameRoute},
-  {path:"/speak_game", route:speakGameRoute}
+  {path:"/speak_game", route:speakGameRoute},
+  {path:"/setting", route: SettingsRoutes}
 ];
 
 moduleRouth.forEach((v) => router.use(v.path, v.route));

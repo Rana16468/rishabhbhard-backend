@@ -384,7 +384,7 @@ const verificationForgotUserIntoDb = async (
 };
 
 const resetPasswordIntoDb = async (payload: {
-  phoneNumber
+  userId
 : string;
   password: string;
 }) => {
@@ -392,7 +392,7 @@ const resetPasswordIntoDb = async (payload: {
     const isExistUser = await users.findOne(
       {
         $and: [
-          { phoneNumber: payload.phoneNumber
+          { _id: payload.userId,
  },
           { isVerify: true },
           { status: USER_ACCESSIBILITY.isProgress },
@@ -417,13 +417,9 @@ const resetPasswordIntoDb = async (payload: {
       { password: payload.password },
       { new: true, upsert: true },
     );
-    return result && { status: true, message: 'successfylly reset password' };
-  } catch (error: any) {
-    throw new ApiError(
-      httpStatus.SERVICE_UNAVAILABLE,
-      'server unavailable  reset password into db function',
-      error,
-    );
+    return result && { status: true, message: 'successfully reset password' };
+  } catch (error) {
+     catchError(error);
   }
 };
 

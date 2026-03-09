@@ -11,10 +11,9 @@ route.post("/recorded_speak_game_data", auth(USER_ROLE.admin, USER_ROLE.superAdm
 route.get("/my_speak_game_level", auth(USER_ROLE.admin, USER_ROLE.superAdmin, USER_ROLE.user), speakGameController.myGameLevel);
 route.delete("/delete_speak_game/:id", auth(USER_ROLE.admin, USER_ROLE.superAdmin, USER_ROLE.user), speakGameController.deleteSpeakGame);
 route.get("/tracking_my_speak_game_summary",auth(USER_ROLE.admin, USER_ROLE.superAdmin, USER_ROLE.user),speakGameController.trackingMySpeakSummary);
+route.get("/game_graph",auth(USER_ROLE.admin, USER_ROLE.superAdmin, USER_ROLE.user),speakGameController.gameGraph);
 
-
-
-
+// route.get("/find_by_researcher_user/:userId", auth(USER_ROLE.admin), speakGameController.)
 const speakGameRoute=route;
 
 export default speakGameRoute;

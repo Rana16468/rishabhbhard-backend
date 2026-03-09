@@ -12,6 +12,8 @@ import QueryBuilder from "../../app/builder/QueryBuilder";
 import { TUser } from "../user/user.interface";
 import { sendFileToCloudinary } from "../../utility/sendImageToCloudinary";
 import catchError from "../../app/error/catchError";
+import gameone from "../gameone/gameone.model";
+import mongoose from "mongoose";
 
 
 
@@ -284,40 +286,49 @@ const findByAllUsersAdminIntoDb = async (query: Record<string, unknown>) => {
 };
 
 
-
 const deleteAccountIntoDb = async (id: string) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
   try {
+    // 1️⃣ Find the user first
     const user = await users
       .findOne({
         _id: id,
         isVerify: true,
         status: USER_ACCESSIBILITY.isProgress,
       })
+      .session(session)
       .lean();
 
     if (!user) {
-      throw new ApiError(httpStatus.NOT_FOUND, "User account not found.","");
+      throw new ApiError(httpStatus.NOT_FOUND, "User account not found.", "");
     }
 
     if (user.role === USER_ROLE.superAdmin) {
       throw new ApiError(httpStatus.FORBIDDEN, "Super Admin cannot be deleted.", "");
-    };
-    
+    }
 
+    // 2️⃣ Delete all related gameone records
+    await gameone.deleteMany({ userId: id }).session(session);
 
-   
+    // 3️⃣ Delete the user account
+    await users.deleteOne({ _id: id }).session(session);
+
+    // 4️⃣ Commit transaction
+    await session.commitTransaction();
+    session.endSession();
 
     return {
       status: true,
       message: "User account and all related data deleted successfully.",
     };
-  } catch (error:any) {
-    
+  } catch (error: any) {
+    // 🔄 Rollback if anything fails
+    await session.abortTransaction();
+    session.endSession();
 
-    throw new ApiError(
-      httpStatus.INTERNAL_SERVER_ERROR,
-      error?.message || "Delete operation failed.", ""
-    );
+     catchError(error);
   }
 };
 
@@ -500,9 +511,10 @@ const verifiedUserIntoDb=async(id:string, payload:{
   catch(error){
     catchError(error);
   }
+};
 
 
-}
+
 
 
 
