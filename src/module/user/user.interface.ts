@@ -11,6 +11,7 @@ export type TUser = {
   nickname:string;
   role: 'user' | 'admin' | 'superAdmin';
   userUniqueId: string;
+  dataCenter: string;
   password?: string;
   email: string;
   phoneNumber: string;

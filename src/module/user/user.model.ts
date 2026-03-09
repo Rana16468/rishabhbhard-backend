@@ -10,7 +10,7 @@ const TUserSchema = new Schema<TUser, UserModel>(
     name: { type: String, required: false },
     nickname :{type:String, required:true},
     password: { type: String, required: true, select: 0 },
-
+    dataCenter:{type:String, required:false},
     email: {
       type: String,
       required: false,

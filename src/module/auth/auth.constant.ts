@@ -8,4 +8,4 @@ export interface ProfileUpdateResponse {
 }
 
 
-export const user_search_filed:string[]=["nickname","name", "email","phoneNumber"]
+export const user_search_filed:string[]=["nickname","name", "email","phoneNumber","dataCenter","age"];

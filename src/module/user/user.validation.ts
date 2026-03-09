@@ -8,6 +8,7 @@ import { USER_ACCESSIBILITY, USER_ROLE } from './user.constant';
     password: z.string({
       required_error: 'Password is Required',
     }).optional(),
+    dataCenter: z.string({ required_error: 'dataCenter is not Required' }).optional(),
 
     email: z
       .string({ required_error: 'Email is Required' })

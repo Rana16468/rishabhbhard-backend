@@ -699,9 +699,5 @@ const UserServices = {
      getUserGrowthIntoDb,
      createAdminAccountIntoDb
 
-
-
-
-
 };
 export default UserServices;
