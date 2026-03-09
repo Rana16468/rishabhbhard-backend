@@ -106,7 +106,7 @@ router.post("/conversation_memory_recorded",upload.single("file"),
   router.get("/find_my_all_conversation", auth(USER_ROLE.user), chatBotController.findMyAllConversation);
   router.get("/find_all_conversation", auth(USER_ROLE.superAdmin,USER_ROLE.admin), chatBotController.findAllConversation);
   router.delete("/delete_conversation_memory/:id", auth(USER_ROLE.superAdmin,USER_ROLE.admin), chatBotController.deleteConversationMemory);
+  router.get("/conversation_growth", auth(USER_ROLE.superAdmin,USER_ROLE.admin), chatBotController.getConversationGrowth);
 
-  
 export const chatBotRoutes = router;
 export default router;

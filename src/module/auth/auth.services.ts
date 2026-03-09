@@ -14,6 +14,7 @@ import { sendFileToCloudinary } from "../../utility/sendImageToCloudinary";
 import catchError from "../../app/error/catchError";
 import gameone from "../gameone/gameone.model";
 import mongoose from "mongoose";
+import conversationmemorys from "../chatbot/chatbot.model";
 
 
 
@@ -300,6 +301,7 @@ const deleteAccountIntoDb = async (id: string) => {
       })
       .session(session)
       .lean();
+      await conversationmemorys.deleteMany({ userId: id }).session(session);
 
     if (!user) {
       throw new ApiError(httpStatus.NOT_FOUND, "User account not found.", "");

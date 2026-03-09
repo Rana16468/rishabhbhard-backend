@@ -162,6 +162,17 @@ const  deleteConversationMemory:RequestHandler=catchAsync(async(req , res)=>{
       });
 });
 
+
+const getConversationGrowth:RequestHandler=catchAsync(async(req , res)=>{
+  const result=await chatBotServices.getConversationGrowthIntoDb(req.query);
+      sendRespone(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: "successfully get conversation growth",
+        data: result,
+      });
+});
+
 const chatBotController = {
   textToTextChat,
   getChatHistory,
@@ -170,7 +181,8 @@ const chatBotController = {
    conversationMemoryRecorded,
     findMyAllConversation,
     findAllConversation,
-    deleteConversationMemory
+    deleteConversationMemory,
+     getConversationGrowth
 };
 
 export default chatBotController;
