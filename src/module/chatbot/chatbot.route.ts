@@ -1,11 +1,15 @@
 // chatbot.routes.ts
 
-import express, { Router } from "express";
+import express, { NextFunction, Request, Response, Router } from "express";
 import auth from "../../middleware/auth";
 import { USER_ROLE } from "../user/user.constant";
 import validationRequest from "../../middleware/validationRequest";
 import chatbotValidation from "./chatbot.validation";
 import chatBotController from "./chatbot.controller";
+
+import ApiError from "../../app/error/ApiError";
+import httpStatus from "http-status";
+import upload from "../../utility/uplodeFile";
 
 const router: Router = express.Router();
 
@@ -87,6 +91,22 @@ router.get(
 router.delete("/delete_specific_chatbot/:id", auth(USER_ROLE.superAdmin,USER_ROLE.admin), chatBotController. deleteChatBotInfoInfo)
 router.post("/store_chat_data", auth(USER_ROLE.user), validationRequest(chatbotValidation.ChatHistoryZodSchema), chatBotController.chatDataStore);
 
+router.post("/conversation_memory_recorded",upload.single("file"),
+  (req: Request, res: Response, next: NextFunction) => {
+    try {
+      if (req.body.data && typeof req.body.data === "string") {
+        req.body = JSON.parse(req.body.data);
+      }
+      next();
+    } catch (error) {
+      next(new ApiError(httpStatus.BAD_REQUEST, "Invalid JSON data", ""));
+    }
+  }, auth(USER_ROLE.user), validationRequest(chatbotValidation.ConversationMemoryZodSchema), chatBotController.conversationMemoryRecorded);
 
+  router.get("/find_my_all_conversation", auth(USER_ROLE.user), chatBotController.findMyAllConversation);
+  router.get("/find_all_conversation", auth(USER_ROLE.superAdmin,USER_ROLE.admin), chatBotController.findAllConversation);
+  router.delete("/delete_conversation_memory/:id", auth(USER_ROLE.superAdmin,USER_ROLE.admin), chatBotController.deleteConversationMemory);
+
+  
 export const chatBotRoutes = router;
 export default router;

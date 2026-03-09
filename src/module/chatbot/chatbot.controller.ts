@@ -114,13 +114,63 @@ const  chatDataStore:RequestHandler=catchAsync(async(req , res)=>{
         message: "successfully recorded",
         data: result,
       });
-})
+});
+
+
+const  conversationMemoryRecorded:RequestHandler=catchAsync(async(req , res)=>{
+  const  result=await chatBotServices.conversationMemoryRecordedIntoDb(req, req.user.id);
+      sendRespone(res, {
+        statusCode: httpStatus.CREATED,
+        success: true,
+        message: "successfully recorded",
+        data: result,
+      });
+});
+
+
+const findMyAllConversation:RequestHandler=catchAsync(async(req, res)=>{
+   const result=await chatBotServices.findMyAllConversationIntoDb(req.user.id, req.query);
+    sendRespone(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: "successfully Find My Conversation",
+        data: result,
+      });
+
+
+});
+
+
+const findAllConversation:RequestHandler=catchAsync(async(req, res)=>{
+   const result=await chatBotServices.findAllConversationIntoDb(req.query);
+    sendRespone(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: "successfully Find All Conversation",
+        data: result,
+      });
+});
+
+
+const  deleteConversationMemory:RequestHandler=catchAsync(async(req , res)=>{
+  const result=await chatBotServices.deleteConversationMemoryFromDb(req.params.id);
+    sendRespone(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: "successfully delete",
+        data: result,
+      });
+});
 
 const chatBotController = {
   textToTextChat,
   getChatHistory,
    deleteChatBotInfoInfo,
-   chatDataStore
+   chatDataStore,
+   conversationMemoryRecorded,
+    findMyAllConversation,
+    findAllConversation,
+    deleteConversationMemory
 };
 
 export default chatBotController;

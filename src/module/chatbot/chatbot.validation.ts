@@ -145,12 +145,28 @@ const getChatHistoryValidationSchema = z.object({
    })
 });
 
+
+
+const ConversationMemoryZodSchema = z.object({
+  body: z.object({
+     reply: z.string().min(1, "Reply is required"),
+  question_category: z.string().min(1, "Question category is required"),
+  conversation_topic: z.string().min(1, "Conversation topic is required"),
+  icope_health_trigger: z.boolean(),
+  mental_distress: z.boolean(),
+  summary: z.string().min(1, "Summary is required"),
+  audio_file: z.string().optional(),
+  isDeleted: z.boolean().default(false)
+  })
+});
+
 const chatbotValidation = {
   chatbotValidationSchema,
   audioMessageValidationSchema,
   startAudioSessionValidationSchema,
   getChatHistoryValidationSchema,
-   ChatHistoryZodSchema
+   ChatHistoryZodSchema,
+   ConversationMemoryZodSchema
 };
 
 export default chatbotValidation;

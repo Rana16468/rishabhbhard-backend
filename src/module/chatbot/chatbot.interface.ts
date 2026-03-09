@@ -1,6 +1,6 @@
 // chatbot.interface.ts
 
-import { Document, Types } from "mongoose";
+import { Document, Model, Types } from "mongoose";
 
 /**
  * Chat History Document Interface
@@ -79,4 +79,22 @@ export interface ConversationMetadata {
   questionCategory?: string;
   conversationTopic?: string;
   expression?: string;
+}
+
+
+export interface TConversationMemory {
+  reply: string;
+  question_category: string;
+  conversation_topic: string;
+  icope_health_trigger: boolean;
+  mental_distress: boolean;
+  summary: string;
+  userId: Types.ObjectId
+  audio_file?: string; 
+  isDeleted?: boolean;
+}
+
+
+export interface ConversationMemoryModel extends Model< TConversationMemory> {
+  conversationMemoryCustomId(id: string): Promise<TConversationMemory | null>;
 }

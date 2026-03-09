@@ -525,7 +525,6 @@ const AuthServices = {
   changeMyProfileIntoDb,
   findByAllUsersAdminIntoDb,
   deleteAccountIntoDb,
-
   getUserGrowthIntoDb,
   isBlockAccountIntoDb,
   loginAdminAccountIntoDb,

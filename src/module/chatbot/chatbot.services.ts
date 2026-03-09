@@ -17,6 +17,11 @@ import catchError from "../../app/error/catchError";
 import { Part } from "@google/genai";
 import { partialUtil } from "zod/lib/helpers/partialUtil";
 import { IChatHistory } from "./chatbot.interface";
+import { Request } from "express";
+import conversationmemorys from "./chatbot.model";
+
+import fs from "fs";
+import path from "path";
 
 /* ======================== INTERFACES ======================== */
 export interface UserProfile {
@@ -209,9 +214,7 @@ const deleteChatBotInfoInfoDb = async (userId: string, chatId: string) => {
 
 const chatDataStoreIntoDb=async(payload:Partial<IChatHistory>, userId:string)=>{
 
-
       try{
-
         const result=await ChatHistoryModel.create({...payload, userId});
 
          return result;
@@ -223,8 +226,125 @@ const chatDataStoreIntoDb=async(payload:Partial<IChatHistory>, userId:string)=>{
 
 
     
-}
+};
 
+
+const  conversationMemoryRecordedIntoDb=async(req:Request, userId:string)=>{
+
+    try{
+     const file = req.file;
+      if (!file) {
+        throw new ApiError(httpStatus.BAD_REQUEST, "Audio file is required", "");
+      }
+    const bodyData = req.body;
+    const audio_file=file.path.replace(/\\/g, "/");
+
+
+    const result=await conversationmemorys.create({
+      userId,
+      ...bodyData,
+      audio_file
+    });
+
+    if(!result){
+      throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, "Failed to save conversation memory", "");
+    }
+
+     return {
+       status : true , 
+       message : "Conversation memory recorded successfully",
+     }
+
+    }
+    catch(error){
+      catchError(error);
+
+    }
+};
+
+
+const findMyAllConversationIntoDb = async (userId:string ,query: Record<string, unknown>) => {
+  try {
+    const allConversationMemoryQuery = new QueryBuilder(
+      conversationmemorys
+        .find({ userId }).populate([{ path: "userId", select: "name photo nickname" }]),
+      query,
+    )
+      .search(["reply", "question_category", "conversation_topic", "summary"])
+      .filter()
+      .sort()
+      .paginate()
+      .fields();
+
+    const my_conversation_memories = await  allConversationMemoryQuery.modelQuery;
+    const meta = await  allConversationMemoryQuery.countTotal();
+
+    return { meta, my_conversation_memories };
+  } catch (error) {
+    catchError(error);
+  }
+};
+
+const findAllConversationIntoDb = async (query: Record<string, unknown>) => {
+  try {
+    const allConversationMemoryQuery = new QueryBuilder(
+      conversationmemorys
+        .find({  }).populate([{ path: "userId", select: "name photo nickname" }]).sort({ createdAt: -1 }),
+      query,
+    )
+      .search(["reply", "question_category", "conversation_topic", "summary", "userId.name", "userId.nickname"])
+      .filter()
+      .paginate()
+      .fields();
+
+
+
+    const all_conversation_memories = await  allConversationMemoryQuery.modelQuery;
+    const meta = await  allConversationMemoryQuery.countTotal();
+
+    return { meta,  all_conversation_memories };
+  } catch (error) {
+    catchError(error);
+  }
+};
+
+
+const deleteConversationMemoryFromDb = async ( conversationId: string) => {
+  try {
+
+
+      const isExist = await conversationmemorys.findOne({ _id: conversationId }).select("_id audio_file").lean();
+
+
+
+      if(!isExist){
+        throw new ApiError(httpStatus.NOT_FOUND, "Conversation memory not found", "");
+      }
+
+      if(isExist.audio_file){
+        const audioFilePath = path.join(__dirname, "../../../", isExist.audio_file);
+
+        fs.unlink(audioFilePath, (err) => {       if (err) {        console.error("Error deleting audio file:", err);      } else {        console.log("Audio file deleted successfully");      }    });
+
+
+    const result = await conversationmemorys.deleteOne({
+      _id: conversationId
+    });
+    
+    if (result.deletedCount === 0) {
+      throw new ApiError(httpStatus.NOT_FOUND, "Conversation memory not found", "");
+    };
+
+    return {
+      status: true,
+      message: "Conversation memory deleted successfully",
+    }
+  }
+}
+  catch(error){
+    catchError(error);
+  } 
+}
 /* ======================== EXPORT ======================== */
 const chatBotServices = {
   startAudioSession,
@@ -233,7 +353,11 @@ const chatBotServices = {
   audioChatIntoDb,
   getChatHistory,
   deleteChatBotInfoInfoDb,
-  chatDataStoreIntoDb
+  chatDataStoreIntoDb,
+  conversationMemoryRecordedIntoDb,
+ findMyAllConversationIntoDb ,
+ findAllConversationIntoDb,
+  deleteConversationMemoryFromDb
 };
 
 export default chatBotServices;
