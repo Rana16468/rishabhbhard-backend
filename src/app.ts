@@ -13,6 +13,7 @@ import globalErrorHandelar from "./middleware/globalErrorHandelar";
 import auto_delete_unverified_user from "./utility/auto_delete_unverified_user";
 import catchError from "./app/error/catchError";
 import auto_delete_notification from "./utility/auto_delete_notification";
+import autoDeleteChatBotInfo from "./utility/autoDeleteChatBotInfo";
 declare global {
   namespace Express {
     interface Request {
@@ -72,6 +73,19 @@ cron.schedule("*/30 * * * *", async () => {
   }
 });
 
+//autoDeleteChatBotInfo 
+
+cron.schedule("*/30 * * * *", async () => {
+  try {
+   
+
+   const result= await autoDeleteChatBotInfo();
+   console.log(result);
+
+  } catch (error) {
+    catchError(error, "[Cron] Error in chatbot auto delete cron job:");
+  }
+});
 
 
 
