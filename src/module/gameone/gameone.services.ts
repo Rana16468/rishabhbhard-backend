@@ -398,9 +398,14 @@ const findByResearcherUserIntoDb = async (query: IPaginationQuery) => {
         },
       },
 
-      { $unwind: { path: "$userInfo", preserveNullAndEmptyArrays: true } },
+      {
+        $unwind: {
+          path: "$userInfo",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
 
-      // 3️⃣ search filter (nickname + gameMode)
+      // 3️⃣ search filter
       {
         $match: {
           $or: [
@@ -413,7 +418,9 @@ const findByResearcherUserIntoDb = async (query: IPaginationQuery) => {
       // 4️⃣ compute click metrics
       {
         $addFields: {
-          totalClicks: { $size: { $ifNull: ["$tileClicks", []] } },
+          totalClicks: {
+            $size: { $ifNull: ["$tileClicks", []] },
+          },
           correctClicks: {
             $size: {
               $filter: {
@@ -449,12 +456,42 @@ const findByResearcherUserIntoDb = async (query: IPaginationQuery) => {
         },
       },
 
-      // 6️⃣ final projection
+      // 6️⃣ add full game mode meaning
+      {
+        $addFields: {
+          gameModeFullMeaning: {
+            $switch: {
+              branches: [
+                {
+                  case: { $eq: ["$gameMode", "OC"] },
+                  then: "Object Categorisation (Find Game)",
+                },
+                {
+                  case: { $eq: ["$gameMode", "UOT"] },
+                  then: "Utility Of Things (Match Game)",
+                },
+                {
+                  case: { $eq: ["$gameMode", "VF"] },
+                  then: "Verbal Fluency (Speak Game)",
+                },
+              ],
+              default: "$gameMode",
+            },
+          },
+        },
+      },
+
+      // 7️⃣ final projection
       {
         $project: {
           _id: 0,
+
           gameMode: 1,
-          sessionId: { $concat: [ { $toString: "$_id" }] },
+          gameModeFullMeaning: 1,
+
+          sessionId: {
+            $concat: [{ $toString: "$_id" }],
+          },
 
           user: {
             userId: "$userInfo._id",
@@ -482,7 +519,7 @@ const findByResearcherUserIntoDb = async (query: IPaginationQuery) => {
         },
       },
 
-      // 7️⃣ pagination
+      // 8️⃣ pagination
       {
         $facet: {
           data: [{ $skip: skip }, { $limit: limit }],
