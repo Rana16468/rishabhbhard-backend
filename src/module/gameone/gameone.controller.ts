@@ -36,7 +36,7 @@ const myGameLevel:RequestHandler=catchAsync(async(req , res)=>{
 const  deleteGameOneData:RequestHandler=catchAsync(async(req , res)=>{
 
 
-      const result=await GameOneServices.deleteGameOneDataIntoDb(req.user.id, req.params.id);
+      const result=await GameOneServices.deleteGameOneDataIntoDb( req.params.id);
  sendRespone(res, {
     success: true,
     statusCode: httpStatus.OK,
@@ -61,7 +61,7 @@ const  trackingSummary:RequestHandler=catchAsync(async(req , res)=>{
 
 const findByResearcherUser:RequestHandler=catchAsync(async(req , res)=>{
 
-  const result=await GameOneServices.findByResearcherUserIntoDb(req.params.userId, req.query);
+  const result=await GameOneServices.findByResearcherUserIntoDb (req.query);
  sendRespone(res, {
     success: true,
     statusCode: httpStatus.OK,

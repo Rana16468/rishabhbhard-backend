@@ -214,6 +214,9 @@ const deleteChatBotInfoInfoDb = async (userId: string, chatId: string) => {
 
 const chatDataStoreIntoDb=async(payload:Partial<IChatHistory>, userId:string)=>{
 
+
+  console.log(payload)
+
       try{
         const result=await ChatHistoryModel.create({...payload, userId});
 
@@ -237,6 +240,8 @@ const  conversationMemoryRecordedIntoDb=async(req:Request, userId:string)=>{
         throw new ApiError(httpStatus.BAD_REQUEST, "Audio file is required", "");
       }
     const bodyData = req.body;
+
+   
     const audio_file=file.path.replace(/\\/g, "/");
 
 
@@ -285,11 +290,11 @@ const findMyAllConversationIntoDb = async (userId:string ,query: Record<string, 
   }
 };
 
-const findAllConversationIntoDb = async (query: Record<string, unknown>) => {
+const findAllConversationIntoDb = async (query: Record<string, unknown>, userId:string) => {
   try {
     const allConversationMemoryQuery = new QueryBuilder(
       conversationmemorys
-        .find({  }).populate([{ path: "userId", select: "name photo nickname" }]).sort({ createdAt: -1 }),
+        .find({ userId }).populate([{ path: "userId", select: "name photo nickname" }]).sort({ createdAt: -1 }),
       query,
     )
       .search(["reply", "question_category", "conversation_topic", "summary", "userId.name", "userId.nickname"])

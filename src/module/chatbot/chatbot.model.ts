@@ -6,8 +6,9 @@ import { TConversationMemory, ConversationMemoryModel } from "./chatbot.interfac
 
 
 const ConversationMemorySchema = new Schema<TConversationMemory & Document, ConversationMemoryModel>({
+  userText:{ type: String, required: true, index: true},
   reply: { type: String, required: true, index: true },
-  userId: { type: Schema.Types.ObjectId, required: true, ref: "users" },
+  userId: { type: Schema.Types.ObjectId, index:true,  required: true, ref: "users" },
   question_category: { type: String, required: true },
   conversation_topic: { type: String, required: true },
   icope_health_trigger: { type: Boolean, required: true },

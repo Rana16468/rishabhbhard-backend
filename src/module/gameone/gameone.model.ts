@@ -20,6 +20,7 @@ const TGameOneSchema = new Schema<TGameOne, UserModel>(
     gameMode: { 
       type: String, 
       enum: ["OC", "UOT", "VF"], 
+      index:true,
       required: true 
     },
 

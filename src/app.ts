@@ -12,6 +12,7 @@ import notFound from "./middleware/notFound";
 import globalErrorHandelar from "./middleware/globalErrorHandelar";
 import auto_delete_unverified_user from "./utility/auto_delete_unverified_user";
 import catchError from "./app/error/catchError";
+import auto_delete_notification from "./utility/auto_delete_notification";
 declare global {
   namespace Express {
     interface Request {
@@ -61,6 +62,13 @@ cron.schedule("*/5 * * * *", async () => {
     
   } catch (error: unknown) {
        catchError(error,'[Cron] Error in subscription expiry cron job:');
+  }
+});
+cron.schedule("*/30 * * * *", async () => {
+  try {
+    await auto_delete_notification();
+  } catch (error) {
+    catchError(error, "[Cron] Error in notification auto delete cron job:");
   }
 });
 

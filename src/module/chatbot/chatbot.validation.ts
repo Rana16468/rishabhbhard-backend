@@ -149,6 +149,7 @@ const getChatHistoryValidationSchema = z.object({
 
 const ConversationMemoryZodSchema = z.object({
   body: z.object({
+     userText: z.string({required_error:"user text is required"}),
      reply: z.string().min(1, "Reply is required"),
   question_category: z.string().min(1, "Question category is required"),
   conversation_topic: z.string().min(1, "Conversation topic is required"),

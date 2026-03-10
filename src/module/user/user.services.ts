@@ -10,6 +10,8 @@ import { jwtHelpers } from '../../app/helper/jwtHelpers';
 import config from '../../app/config';
 import bcrypt from 'bcrypt';
 import catchError from '../../app/error/catchError';
+import { getSocketIO } from '../../socket/connectSocket';
+import notifications from '../notification/notification.model';
 
 const generateUniqueOTP = async (): Promise<number> => {
   const MAX_ATTEMPTS = 10;
@@ -33,64 +35,74 @@ const generateUniqueOTP = async (): Promise<number> => {
 
 const createUserIntoDb = async (payload: TUser) => {
   const session = await mongoose.startSession();
-  session.startTransaction();
 
   try {
+    session.startTransaction();
+
+    const io = getSocketIO() as any;
     const otp = await generateUniqueOTP();
 
     const isExistUser = await users.findOne(
       {
-        $and: [
-          {
-            phoneNumber: payload.phoneNumber,
-            isVerify: true,
-            status: USER_ACCESSIBILITY.isProgress,
-          },
-        ],
+        phoneNumber: payload.phoneNumber,
+        isVerify: true,
+        status: USER_ACCESSIBILITY.isProgress,
       },
-      { _id: 1, email: 1, phoneNumber: 1, role: 1 },
+      { _id: 1, email: 1, phoneNumber: 1, role: 1 }
     );
 
-    payload.verificationCode = otp;
-  
-
     if (isExistUser) {
-      // await session.abortTransaction();
-      // session.endSession();
       throw new ApiError(
-        httpStatus.FOUND,
-        'this email alredy exist in our database',
-        '',
+        httpStatus.CONFLICT,
+        "This phone number already exists" , ''
       );
     }
-    payload.isVerify=false;
+
+    payload.verificationCode = otp;
+    payload.isVerify = false;
 
     const authBuilder = new users(payload);
-
     const result = await authBuilder.save({ session });
-    // await sendEmail(
-    //   payload.email,
-    //   emailcontext.sendvarificationData(
-    //     payload.email,
-    //     otp,
-    //     'User Verification Email',
-    //   ),
-    //   'Verification OTP Code',
-    // );
 
     await session.commitTransaction();
-    session.endSession();
 
-    return result && { status: true, message: 'successfully create a an account' };
+    // -------------------------------
+    // Notification + Socket (outside transaction)
+    // -------------------------------
+
+    const title = `New User Registration: ${payload.nickname}`;
+    const message = `A new user has registered with the  phone number: ${payload.phoneNumber}.`;
+
+    io.emit(`user::admin`, {
+      id: Date.now(),
+      title,
+      message,
+      timestamp: new Date().toISOString(),
+      sender: "system",
+    });
+
+    
+
+    await notifications.create({
+      title,
+      message,
+      userId: result._id,
+    });
+
+    return {
+      status: true,
+      message: "Successfully created an account",
+    };
   } catch (error: any) {
     await session.abortTransaction();
-    session.endSession();
 
     throw new ApiError(
       httpStatus.SERVICE_UNAVAILABLE,
-      'server unavailable',
-      error,
+      "Server unavailable",
+      error
     );
+  } finally {
+    session.endSession();
   }
 };
 

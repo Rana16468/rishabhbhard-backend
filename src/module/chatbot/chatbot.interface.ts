@@ -83,6 +83,7 @@ export interface ConversationMetadata {
 
 
 export interface TConversationMemory {
+  userText:string;
   reply: string;
   question_category: string;
   conversation_topic: string;

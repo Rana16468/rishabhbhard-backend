@@ -142,7 +142,7 @@ const findMyAllConversation:RequestHandler=catchAsync(async(req, res)=>{
 
 
 const findAllConversation:RequestHandler=catchAsync(async(req, res)=>{
-   const result=await chatBotServices.findAllConversationIntoDb(req.query);
+   const result=await chatBotServices.findAllConversationIntoDb(req.query, req.params.userId);
     sendRespone(res, {
         statusCode: httpStatus.OK,
         success: true,

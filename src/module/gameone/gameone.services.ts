@@ -83,10 +83,10 @@ const myGameLevelIntoDb = async (userId: string) => {
   }
 };
 
-const deleteGameOneDataIntoDb = async (userId: string, id: string) => {
+const deleteGameOneDataIntoDb = async ( id: string) => {
   try {
     // Check if document exists for this user
-    const isExistGame = await gameone.exists({ userId, _id: id });
+    const isExistGame = await gameone.exists({  _id: id });
 
     if (!isExistGame) {
       throw new ApiError(
@@ -97,7 +97,7 @@ const deleteGameOneDataIntoDb = async (userId: string, id: string) => {
     }
 
     // Delete the document
-    const result = await gameone.deleteOne({ userId, _id: id });
+    const result = await gameone.deleteOne({ _id: id });
 
     if (result.deletedCount !== 1) {
       throw new ApiError(
@@ -348,31 +348,28 @@ const trackingSummaryIntoDb = async (
 interface IPaginationQuery {
   page?: number;
   limit?: number;
+  searchTerm?:string
 }
 
 
 
-const findByResearcherUserIntoDb = async (
-  userId: string,
-  query: IPaginationQuery
-) => {
+const findByResearcherUserIntoDb = async (query: IPaginationQuery) => {
   try {
-    const objectUserId = new Types.ObjectId(userId);
-
     const page = Number(query.page) || 1;
     const limit = Number(query.limit) || 10;
     const skip = (page - 1) * limit;
 
+    const searchTerm = query.searchTerm || "";
+
     const result = await gameone.aggregate([
-      // 1️⃣ Match user's non-deleted games
+      // 1️⃣ filter non-deleted games
       {
         $match: {
-          userId: objectUserId,
           isDelete: false,
         },
       },
 
-      // 2️⃣ Lookup user info (handles ObjectId/string mismatch)
+      // 2️⃣ join user collection
       {
         $lookup: {
           from: "users",
@@ -381,20 +378,39 @@ const findByResearcherUserIntoDb = async (
             {
               $match: {
                 $expr: {
-                  $or: [
-                    { $eq: ["$_id", "$$uid"] },
-                    { $eq: [{ $toString: "$_id" }, { $toString: "$$uid" }] },
-                  ],
+                  $eq: ["$_id", "$$uid"],
                 },
+              },
+            },
+            {
+              $project: {
+                name: 1,
+                nickname: 1,
+                age: 1,
+                gender: 1,
+                hobbies: 1,
+                language: 1,
+                email: 1,
               },
             },
           ],
           as: "userInfo",
         },
       },
+
       { $unwind: { path: "$userInfo", preserveNullAndEmptyArrays: true } },
 
-      // 3️⃣ Compute click metrics
+      // 3️⃣ search filter (nickname + gameMode)
+      {
+        $match: {
+          $or: [
+            { "userInfo.nickname": { $regex: searchTerm, $options: "i" } },
+            { gameMode: { $regex: searchTerm, $options: "i" } },
+          ],
+        },
+      },
+
+      // 4️⃣ compute click metrics
       {
         $addFields: {
           totalClicks: { $size: { $ifNull: ["$tileClicks", []] } },
@@ -410,7 +426,7 @@ const findByResearcherUserIntoDb = async (
         },
       },
 
-      // 4️⃣ Compute accuracy percentage
+      // 5️⃣ accuracy calculation
       {
         $addFields: {
           accuracyPercentage: {
@@ -433,84 +449,59 @@ const findByResearcherUserIntoDb = async (
         },
       },
 
-      // 5️⃣ Shape each session document
+      // 6️⃣ final projection
       {
         $project: {
           _id: 0,
-          gameMode: "$gameMode",
-          sessionId: { $concat: ["sess_", { $toString: "$_id" }] },
-          userId: { $concat: ["usr_", { $toString: "$userId" }] },
-          userDemographics: {
+          gameMode: 1,
+          sessionId: { $concat: [ { $toString: "$_id" }] },
+
+          user: {
+            userId: "$userInfo._id",
+            name: "$userInfo.name",
+            nickname: "$userInfo.nickname",
             age: "$userInfo.age",
             gender: "$userInfo.gender",
             hobbies: "$userInfo.hobbies",
-            primaryLanguage: { $arrayElemAt: ["$userInfo.language", 0] },
-            secondaryLanguage: { $arrayElemAt: ["$userInfo.language", 1] },
+            language: "$userInfo.language",
+            email: "$userInfo.email",
           },
+
           gameData: {
-            gameMode: "$gameMode",
-            timestamp: "$timestamp",
             difficulty: "$difficulty",
             stage: "$stage",
+            timestamp: "$timestamp",
             completionTime: "$completionTime",
             metrics: {
               totalHintsUsed: "$hintsUsed",
-              totalRepeatInstructions: {
-                $size: { $ifNull: ["$repeatButtonClicks", []] },
-              },
               accuracyPercentage: "$accuracyPercentage",
-              instructionText: "$instructionText", // ✅ new field added
+              instructionText: "$instructionText",
             },
             rawTileClicks: "$tileClicks",
           },
         },
       },
 
-      // 6️⃣ Group sessions by gameMode
+      // 7️⃣ pagination
       {
-        $group: {
-          _id: "$gameMode",
-          sessions: { $push: "$$ROOT" },
-          totalRecords: { $sum: 1 },
+        $facet: {
+          data: [{ $skip: skip }, { $limit: limit }],
+          meta: [{ $count: "total" }],
         },
-      },
-
-      // 7️⃣ Paginate sessions inside each gameMode + final shape
-      {
-        $project: {
-          _id: 0,
-          gameMode: "$_id",
-          totalRecords: 1,
-          totalPages: {
-            $ceil: { $divide: ["$totalRecords", limit] },
-          },
-          currentPage: { $literal: page },
-          pageSize: { $literal: limit },
-          data: {
-            $slice: ["$sessions", skip, limit],
-          },
-        },
-      },
-
-      // 8️⃣ Sort game modes consistently
-      {
-        $sort: { gameMode: 1 },
       },
     ]);
 
     return {
       researchRequestID: `req_${Date.now()}`,
       exportDate: new Date().toISOString(),
-      currentPage: page,
-      pageSize: limit,
-      gameWiseData: result,
+      page,
+      limit,
+      result,
     };
   } catch (error) {
     catchError(error);
   }
 };
-
-
 
 
 

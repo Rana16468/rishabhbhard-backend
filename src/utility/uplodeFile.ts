@@ -5,7 +5,6 @@ import status from "http-status";
 import fs from "fs";
 import ApiError from "../app/error/ApiError";
 
-
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     let folderPath = "./src/public";
@@ -16,11 +15,13 @@ const storage = multer.diskStorage({
       folderPath = "./src/public/pdf";
     } else if (file.mimetype.startsWith("video")) {
       folderPath = "./src/public/videos";
+    } else if (file.mimetype.startsWith("audio")) {
+      folderPath = "./src/public/audios";   // ✅ Added for WAV/audio
     } else {
       cb(
         new ApiError(
           status.BAD_REQUEST,
-          "Only images, PDFs, and videos are allowed",
+          "Only images, PDFs, videos, and audio files are allowed",
           ""
         ),
         "./src/public"
@@ -52,26 +53,31 @@ const storage = multer.diskStorage({
 const upload = multer({
   storage,
   limits: {
-    fileSize: 300 * 1024 * 1024, // 250 MB in bytes
+    fileSize: 300 * 1024 * 1024, // 300 MB
   },
   fileFilter: (req, file, cb) => {
-   const allowedMimeTypes = [
-  "image/jpeg",        // .jpeg, .jpg
-  "image/png",         // .png
-  "image/gif",         // .gif
-  "image/webp",        // .webp
-  "image/bmp",         // .bmp
-  "image/tiff",        // .tif, .tiff
-  "image/svg+xml",     // .svg
-  "image/heic", 
-  "image/HEIC",       // .heic (iPhone photos)
-  "image/heif",        // .heif
-  "image/x-icon",      // .ico
-  "image/vnd.microsoft.icon", // .ico alternative
-];
+    const allowedMimeTypes = [
+      "image/jpeg",
+      "image/png",
+      "image/gif",
+      "image/webp",
+      "image/bmp",
+      "image/tiff",
+      "image/svg+xml",
+      "image/heic",
+      "image/HEIC",
+      "image/heif",
+      "image/x-icon",
+      "image/vnd.microsoft.icon",
 
+      // ✅ Audio types added
+      "audio/wav",
+      "audio/x-wav",
+      "audio/wave",
+      "audio/x-pn-wav",
+    ];
 
-    // Allow images/PDFs
+    // Allow images / pdf / audio
     if (allowedMimeTypes.includes(file.mimetype)) {
       return cb(null, true);
     }
@@ -81,10 +87,16 @@ const upload = multer({
       return cb(null, true);
     }
 
+    // Allow other audio formats
+    if (file.mimetype.startsWith("audio")) {
+      return cb(null, true);
+    }
+
     return cb(
       new ApiError(
         status.BAD_REQUEST,
-        "Only images, PDFs, and videos are allowed",""
+        "Only images, PDFs, videos, and audio files are allowed",
+        ""
       )
     );
   },
