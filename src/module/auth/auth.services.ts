@@ -15,6 +15,8 @@ import catchError from "../../app/error/catchError";
 import gameone from "../gameone/gameone.model";
 import mongoose from "mongoose";
 import conversationmemorys from "../chatbot/chatbot.model";
+import { deleteFromS3 } from "../../utility/deleteFromS3";
+import { uploadToS3 } from "../../utility/uploadToS3";
 
 
 
@@ -178,6 +180,9 @@ const changeMyProfileIntoDb = async (
       hobbies?:string[]
     };
 
+
+     const isExistPhoto=await  users.findById(id).select("photo")
+
     const updateData: {
       name?: string;
       photo?: string;
@@ -206,14 +211,29 @@ const changeMyProfileIntoDb = async (
     }
 
     if (file) {
-      const username = "rishabhbhard";
-      const randomNumber = Math.floor(10000 + Math.random() * 90000);
-      const imageName = `${username}${randomNumber}`.trim();
+      // const username = "rishabhbhard";
+      // const randomNumber = Math.floor(10000 + Math.random() * 90000);
+      // const imageName = `${username}${randomNumber}`.trim();
 
-      const path = file.path.replace(/\\/g, "/");
+      // const path = file.path.replace(/\\/g, "/");
 
-      const { secure_url } = await sendFileToCloudinary(imageName, path);
-      updateData.photo = secure_url as string;
+      // const { secure_url } = await sendFileToCloudinary(imageName, path);
+      // updateData.photo = secure_url as string;
+
+
+    }
+
+       if (file) {
+      // updateData.photo = file?.path?.replace(/\\/g, "/");
+
+      if( isExistPhoto?.photo)
+      {
+       await deleteFromS3(isExistPhoto?.photo);
+      }
+
+    
+      updateData.photo = await uploadToS3(file, config.file_path);
+    
     }
 
     if (Object.keys(updateData).length === 0) {

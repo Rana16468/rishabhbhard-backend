@@ -21,6 +21,12 @@ export default {
     cloudinary_api_key: process.env.CLOUDINARY_API_KEY,
     cloudinary_api_secret: process.env.CLOUDINARY_API_SECRET,
   },
-  gemini_api_key: process.env.GEMINI_API_KEY
+  gemini_api_key: process.env.GEMINI_API_KEY,
+  s3_bucket: {
+    aws_bucket_accesskey: process.env.AWS_BUCKET_ACCESS_KEY,
+    aws_bucket_secret_key: process.env.AWS_BUCKET_SECRET_KEY,
+    aws_bucket_region: process.env.AWS_BUCKET_REGION,
+    aws_bucket_name: process.env.AWS_BUCKET_NAME,
+  },
 
 };
