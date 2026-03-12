@@ -17,6 +17,7 @@ import mongoose from "mongoose";
 import conversationmemorys from "../chatbot/chatbot.model";
 import { deleteFromS3 } from "../../utility/deleteFromS3";
 import { uploadToS3 } from "../../utility/uploadToS3";
+import notifications from "../notification/notification.model";
 
 
 
@@ -307,50 +308,77 @@ const findByAllUsersAdminIntoDb = async (query: Record<string, unknown>) => {
 };
 
 
+type TUserDelete = {
+  photo?: string;
+  role: string;
+};
+
+type TGameAudio = {
+  audioClipUrl?: string;
+};
+
 const deleteAccountIntoDb = async (id: string) => {
   const session = await mongoose.startSession();
-  session.startTransaction();
 
   try {
-    // 1️⃣ Find the user first
+    session.startTransaction();
+
     const user = await users
-      .findOne({
-        _id: id,
-        isVerify: true,
-        status: USER_ACCESSIBILITY.isProgress,
-      })
+      .findOne(
+        {
+          _id: id,
+          isVerify: true,
+          status: USER_ACCESSIBILITY.isProgress,
+        },
+        { photo: 1, role: 1 }
+      )
       .session(session)
-      .lean();
-      await conversationmemorys.deleteMany({ userId: id }).session(session);
+      .lean<TUserDelete>();
 
     if (!user) {
-      throw new ApiError(httpStatus.NOT_FOUND, "User account not found.", "");
+      throw new ApiError(httpStatus.NOT_FOUND, "User account not found.","");
     }
 
     if (user.role === USER_ROLE.superAdmin) {
-      throw new ApiError(httpStatus.FORBIDDEN, "Super Admin cannot be deleted.", "");
+      throw new ApiError(
+        httpStatus.FORBIDDEN,
+        "Super Admin cannot be deleted.", ""
+      );
     }
 
-    // 2️⃣ Delete all related gameone records
-    await gameone.deleteMany({ userId: id }).session(session);
+    if (user.photo) {
+      await deleteFromS3(user.photo);
+    }
 
-    // 3️⃣ Delete the user account
-    await users.deleteOne({ _id: id }).session(session);
+    const games = await gameone
+      .find({ userId: id })
+      .select("audioClipUrl")
+      .lean<TGameAudio[]>();
 
-    // 4️⃣ Commit transaction
+    const deleteAudioPromises = games
+      .filter((g): g is { audioClipUrl: string } => Boolean(g.audioClipUrl))
+      .map((g) => deleteFromS3(g.audioClipUrl));
+
+    await Promise.all(deleteAudioPromises);
+
+    await Promise.all([
+      conversationmemorys.deleteMany({ userId: id }).session(session),
+      gameone.deleteMany({ userId: id }).session(session),
+      notifications.deleteMany({ userId: id }).session(session),
+      users.deleteOne({ _id: id }).session(session),
+    ]);
+
     await session.commitTransaction();
-    session.endSession();
 
     return {
       status: true,
       message: "User account and all related data deleted successfully.",
     };
-  } catch (error: any) {
-    // 🔄 Rollback if anything fails
+  } catch (error: unknown) {
     await session.abortTransaction();
+    catchError(error);
+  } finally {
     session.endSession();
-
-     catchError(error);
   }
 };
 

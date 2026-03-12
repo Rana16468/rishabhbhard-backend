@@ -4,6 +4,9 @@ import gameone from "./gameone.model";
 import ApiError from "../../app/error/ApiError";
 import { Types } from "mongoose";
 import { Request } from "express";
+import { uploadToS3 } from "../../utility/uploadToS3";
+import config from "../../app/config";
+import { deleteFromS3 } from "../../utility/deleteFromS3";
 
 
 
@@ -18,6 +21,13 @@ const recordedGameOneDataIntoDB = async (userId: string, req: Request) => {
       ...bodyData,
       ...(file?.path && { audioClipUrl: file.path.replace(/\\/g, "/") }),
     };
+
+        if (file) {
+          // updateData.photo = file?.path?.replace(/\\/g, "/");
+          payload.audioClipUrl = await uploadToS3(file, config.file_path);
+        
+        
+        }
 
     const result = await gameone.create(payload);
 
@@ -86,7 +96,7 @@ const myGameLevelIntoDb = async (userId: string) => {
 const deleteGameOneDataIntoDb = async ( id: string) => {
   try {
     // Check if document exists for this user
-    const isExistGame = await gameone.exists({  _id: id });
+    const isExistGame = await gameone.findOne({  _id: id },{_id:1, audioClipUrl:1}) as any;
 
     if (!isExistGame) {
       throw new ApiError(
@@ -95,6 +105,16 @@ const deleteGameOneDataIntoDb = async ( id: string) => {
         ""
       );
     }
+    
+         if( isExistGame?.audioClipUrl)
+          {
+             await deleteFromS3(isExistGame?. audioClipUrl);
+          }
+    
+        
+          
+        
+      
 
     // Delete the document
     const result = await gameone.deleteOne({ _id: id });
