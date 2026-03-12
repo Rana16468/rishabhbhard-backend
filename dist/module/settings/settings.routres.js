@@ -1,0 +1,20 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = __importDefault(require("express"));
+const settings_validation_1 = __importDefault(require("./settings.validation"));
+const settings_controller_1 = __importDefault(require("./settings.controller"));
+const auth_1 = __importDefault(require("../../middleware/auth"));
+const user_constant_1 = require("../user/user.constant");
+const validationRequest_1 = __importDefault(require("../../middleware/validationRequest"));
+const routes = express_1.default.Router();
+routes.post("/about", (0, auth_1.default)(user_constant_1.USER_ROLE.admin, user_constant_1.USER_ROLE.superAdmin), (0, validationRequest_1.default)(settings_validation_1.default.AboutValidationSchema), settings_controller_1.default.updateAboutUs);
+routes.get("/find_by_about_us", settings_controller_1.default.findByAboutUs);
+routes.post("/privacy_policys", (0, auth_1.default)(user_constant_1.USER_ROLE.admin, user_constant_1.USER_ROLE.superAdmin), (0, validationRequest_1.default)(settings_validation_1.default.PrivacyPolicysValidationSchema), settings_controller_1.default.privacyPolicys);
+routes.get("/find_by_privacy_policys", settings_controller_1.default.findByPrivacyPolicyss);
+routes.post("/terms_conditions", (0, auth_1.default)(user_constant_1.USER_ROLE.admin, user_constant_1.USER_ROLE.superAdmin), (0, validationRequest_1.default)(settings_validation_1.default.TermsConditionsValidationSchema), settings_controller_1.default.termsConditions);
+routes.get("/find_by_terms_conditions", settings_controller_1.default.findByTermsConditions);
+const SettingsRoutes = routes;
+exports.default = SettingsRoutes;

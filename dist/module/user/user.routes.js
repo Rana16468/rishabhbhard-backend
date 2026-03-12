@@ -1,0 +1,24 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = __importDefault(require("express"));
+const validationRequest_1 = __importDefault(require("../../middleware/validationRequest"));
+const user_validation_1 = __importDefault(require("./user.validation"));
+const user_controller_1 = __importDefault(require("./user.controller"));
+const auth_1 = __importDefault(require("../../middleware/auth"));
+const user_constant_1 = require("./user.constant");
+const router = express_1.default.Router();
+router.post('/create_user', (0, validationRequest_1.default)(user_validation_1.default.createUserZodSchema), user_controller_1.default.createUser);
+router.patch("/user_verification", (0, validationRequest_1.default)(user_validation_1.default.UserVerification), user_controller_1.default.userVarification);
+router.patch("/change_password", (0, auth_1.default)(user_constant_1.USER_ROLE.admin, user_constant_1.USER_ROLE.superAdmin, user_constant_1.USER_ROLE.user), (0, validationRequest_1.default)(user_validation_1.default.ChnagePasswordSchema), user_controller_1.default.chnagePassword);
+router.post("/forgot_password", (0, validationRequest_1.default)(user_validation_1.default.ForgotPasswordSchema), user_controller_1.default.forgotPassword);
+router.post("/verification_forgot_user", (0, validationRequest_1.default)(user_validation_1.default.verificationCodeSchema), user_controller_1.default.verificationForgotUser);
+router.post("/reset_password", (0, validationRequest_1.default)(user_validation_1.default.resetPasswordSchema), user_controller_1.default.resetPassword);
+router.post("/google_auth", (0, validationRequest_1.default)(user_validation_1.default.createUserZodSchema), user_controller_1.default.googleAuth);
+router.get("/resend_verification_otp/:email", user_controller_1.default.resendVerificationOtp);
+router.get("/user_graph", (0, auth_1.default)(user_constant_1.USER_ROLE.admin, user_constant_1.USER_ROLE.superAdmin), user_controller_1.default.getUserGrowth);
+router.post("/create_admin_account", (0, validationRequest_1.default)(user_validation_1.default.createUserZodSchema), user_controller_1.default.createAdminAccount);
+const UserRouters = router;
+exports.default = UserRouters;
