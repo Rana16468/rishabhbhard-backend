@@ -13,7 +13,7 @@ import catchError from '../../app/error/catchError';
 import { getSocketIO } from '../../socket/connectSocket';
 import notifications from '../notification/notification.model';
 
-const generateUniqueOTP = async (): Promise<number> => {
+export const generateUniqueOTP = async (): Promise<number> => {
   const MAX_ATTEMPTS = 10;
 
   for (let i = 0; i < MAX_ATTEMPTS; i++) {
@@ -280,7 +280,7 @@ const forgotPasswordIntoDb = async (payload: string | { email: string }) => {
     try {
       await sendEmail(
         emailString,
-        emailcontext.sendvarificationData(
+        emailcontext.sendVerificationData(
           emailString,
           otp,
           ' Forgot Password Email',
@@ -540,7 +540,7 @@ const resendVerificationOtpIntoDb = async (email: string) => {
     }
           await sendEmail(
         email,
-        emailcontext.sendvarificationData(
+        emailcontext.sendVerificationData(
           email,
           otp,
           'User Verification Email',
@@ -673,31 +673,54 @@ const getUserGrowthIntoDb = async (query: { year?: string }) => {
   }
 };
 
-const createAdminAccountIntoDb=async(payload:Partial<TUser>)=>{
+const createAdminAccountIntoDb = async (payload: Partial<TUser>) => {
+  try {
+    const isExistUser = await users.exists({
+      email: payload.email,
+      isVerify: true,
+    });
 
-   try{
+    if (isExistUser) {
+      throw new ApiError(
+        httpStatus.CONFLICT,
+        "This user already exists in our system" ,""
+      );
+    }
 
-     const isExistUser=await users.exists({email:payload.email, isVerify:true}).lean();
-     if(isExistUser){
-      throw new ApiError(httpStatus.NOT_EXTENDED, 'this user alredy exist in out system','');
-     };
+    const userData = {
+      ...payload,
+      isVerify: true,
 
-     const result=await users.create({isVerify:true , ...payload});
-     if(!result){
-         
-      throw new ApiError(httpStatus.NOT_EXTENDED, 'issues by the create admin account section' ,'');
-     };
-     return {
-      status:true , 
-      message:"successfully create an admin account"
-     }
-   }
-   catch(error){
+    };
+
+    await users.create(userData);
+
+    const title = `New Researcher Registration: ${payload.nickname}`;
+    const message = `A new researcher user registered with phone number: ${payload.phoneNumber}.`;
+
+    const io = getSocketIO() as any;
+
+    // 7️⃣ Emit socket event
+    io.emit("user::admin", {
+      id: Date.now(),
+      title,
+      message,
+      timestamp: new Date().toISOString(),
+      sender: "system",
+    });
+
+    return {
+      status: true,
+      message: "Successfully created an admin account",
+    };
+  } catch (error) {
     catchError(error);
-   }
+  }
+};
 
 
-}
+
+
 
 const UserServices = {
   createUserIntoDb,

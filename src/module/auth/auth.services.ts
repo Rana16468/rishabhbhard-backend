@@ -18,6 +18,9 @@ import conversationmemorys from "../chatbot/chatbot.model";
 import { deleteFromS3 } from "../../utility/deleteFromS3";
 import { uploadToS3 } from "../../utility/uploadToS3";
 import notifications from "../notification/notification.model";
+import { generateUniqueOTP } from "../user/user.services";
+import sendEmail from "../../utility/sendEmail";
+import emailcontext from "../../utility/emailcontext/sendvarificationData";
 
 
 
@@ -491,52 +494,93 @@ const isBlockAccountIntoDb = async (id: string, payload: Partial<TUser>) => {
 
 
 const loginAdminAccountIntoDb = async (payload: Partial<TUser>) => {
-  // Fetch user by email only
-  const user: any = await users.findOne({
-    email:payload.email,
-    isVerify: true,
-    status: USER_ACCESSIBILITY.isProgress,
-  }, {
-    password: 1,
-    email: 1,
-    role: 1,
-    uid: 1
-  });
+
+  // Find user
+  const user: any = await users.findOne(
+    {
+      email: payload.email,
+      isVerify: true,
+      status: USER_ACCESSIBILITY.isProgress,
+    },
+    {
+      password: 1,
+      email: 1,
+      role: 1,
+      uid: 1,
+      nickname: 1,
+    }
+  );
 
   if (!user) {
     throw new ApiError(
       httpStatus.NOT_FOUND,
-      `User with email "${payload.phoneNumber}" not found`, ""
+      `User with email "${payload.email}" not found`,
+      ""
     );
   }
 
-  
+  // Check password
+  const isMatched = await users.isPasswordMatched(
+    payload.password as string,
+    user.password
+  );
 
-  // Update FCM token if provided
-  if (payload.fcm) {
-    await users.updateOne({ _id: user._id }, { $set: { fcm: payload.fcm } });
-  }
-
-  // Validate password
-  const isMatched = await users.isPasswordMatched(payload.password as string, user.password);
   if (!isMatched) {
-    throw new ApiError(httpStatus.FORBIDDEN, "Password does not match", "");
+    throw new ApiError(
+      httpStatus.FORBIDDEN,
+      "Password does not match",
+      ""
+    );
   }
 
-  // Generate JWT tokens
-  const jwtPayload = { id: user._id, role: user.role, email: user.email, uid: user.uid };
+  // Generate OTP
+  const otp = await generateUniqueOTP();
+
+  // Update user (OTP + optional FCM)
+  await users.updateOne(
+    { _id: user._id },
+    {
+      $set: {
+        verificationCode: otp,
+        ...(payload.fcm && { fcm: payload.fcm }),
+      },
+    }
+  );
+
+  // Send verification email
+  await sendEmail(
+    payload.email as string,
+    emailcontext.sendVerificationData(
+      user.nickname || "User",
+      Number(otp),
+      "User Verification Email"
+    ),
+    "Verification OTP Code"
+  );
+  const jwtPayload = {
+    id: user._id,
+    role: user.role,
+    email: user.email,
+    uid: user.uid,
+  };
+
+  // Generate Tokens
   const accessToken = jwtHelpers.generateToken(
     jwtPayload,
     config.jwt_access_secret as string,
     config.expires_in
   );
+
   const refreshToken = jwtHelpers.generateToken(
     jwtPayload,
     config.jwt_refresh_secret as string,
     config.refresh_expires_in
   );
 
-  return { accessToken, refreshToken };
+  return {
+    accessToken,
+    refreshToken,
+  };
 };
 
 

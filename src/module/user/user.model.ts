@@ -20,7 +20,7 @@ const TUserSchema = new Schema<TUser, UserModel>(
 
     phoneNumber: { type: String, required:[false,'phone number is not required'] },
 
-    verificationCode: { type: Number, required:[false, 'verificationCode is not required'], index: true },
+    verificationCode: { type: Number, required:[false, 'verificationCode is not required'], index: true, default:null },
 
     isVerify: { type: Boolean,required:[false, 'isVerify is not required'], index:true, default: false },
 
