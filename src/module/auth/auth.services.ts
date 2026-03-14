@@ -10,7 +10,6 @@ import { jwtHelpers } from "../../app/helper/jwtHelpers";
 import config from "../../app/config";
 import QueryBuilder from "../../app/builder/QueryBuilder";
 import { TUser } from "../user/user.interface";
-import { sendFileToCloudinary } from "../../utility/sendImageToCloudinary";
 import catchError from "../../app/error/catchError";
 import gameone from "../gameone/gameone.model";
 import mongoose from "mongoose";
@@ -94,9 +93,6 @@ const loginUserIntoDb = async (payload: {
 
   return { accessToken, refreshToken };
 };
-
-
-
 
 
 
@@ -557,30 +553,12 @@ const loginAdminAccountIntoDb = async (payload: Partial<TUser>) => {
     ),
     "Verification OTP Code"
   );
-  const jwtPayload = {
-    id: user._id,
-    role: user.role,
-    email: user.email,
-    uid: user.uid,
-  };
-
-  // Generate Tokens
-  const accessToken = jwtHelpers.generateToken(
-    jwtPayload,
-    config.jwt_access_secret as string,
-    config.expires_in
-  );
-
-  const refreshToken = jwtHelpers.generateToken(
-    jwtPayload,
-    config.jwt_refresh_secret as string,
-    config.refresh_expires_in
-  );
+ 
 
   return {
-    accessToken,
-    refreshToken,
-  };
+    status: true , 
+    message:" please checked your email"
+  }
 };
 
 

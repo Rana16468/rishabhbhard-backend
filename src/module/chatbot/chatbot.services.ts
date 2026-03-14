@@ -22,6 +22,9 @@ import conversationmemorys from "./chatbot.model";
 
 import fs from "fs";
 import path from "path";
+import { uploadToS3 } from "../../utility/uploadToS3";
+import config from "../../app/config";
+import { deleteFromS3 } from "../../utility/deleteFromS3";
 
 /* ======================== INTERFACES ======================== */
 export interface UserProfile {
@@ -242,7 +245,12 @@ const  conversationMemoryRecordedIntoDb=async(req:Request, userId:string)=>{
     const bodyData = req.body;
 
    
-    const audio_file=file.path.replace(/\\/g, "/");
+    let audio_file=file.path.replace(/\\/g, "/");
+    if(audio_file){
+      audio_file=  await uploadToS3(file, config.file_path);
+    }
+
+
 
 
     const result=await conversationmemorys.create({
@@ -327,6 +335,8 @@ const deleteConversationMemoryFromDb = async ( conversationId: string) => {
       }
 
       if(isExist.audio_file){
+
+         await deleteFromS3(isExist.audio_file);
         const audioFilePath = path.join(__dirname, "../../../", isExist.audio_file);
 
         fs.unlink(audioFilePath, (err) => {       if (err) {        console.error("Error deleting audio file:", err);      } else {        console.log("Audio file deleted successfully");      }    });

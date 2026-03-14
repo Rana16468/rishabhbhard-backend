@@ -361,18 +361,9 @@ const loginAdminAccountIntoDb = (payload) => __awaiter(void 0, void 0, void 0, f
     });
     // Send verification email
     yield (0, sendEmail_1.default)(payload.email, sendvarificationData_1.default.sendVerificationData(user.nickname || "User", Number(otp), "User Verification Email"), "Verification OTP Code");
-    const jwtPayload = {
-        id: user._id,
-        role: user.role,
-        email: user.email,
-        uid: user.uid,
-    };
-    // Generate Tokens
-    const accessToken = jwtHelpers_1.jwtHelpers.generateToken(jwtPayload, config_1.default.jwt_access_secret, config_1.default.expires_in);
-    const refreshToken = jwtHelpers_1.jwtHelpers.generateToken(jwtPayload, config_1.default.jwt_refresh_secret, config_1.default.refresh_expires_in);
     return {
-        accessToken,
-        refreshToken,
+        status: true,
+        message: " please checked your email"
     };
 });
 const verifiedUserIntoDb = (id, payload) => __awaiter(void 0, void 0, void 0, function* () {

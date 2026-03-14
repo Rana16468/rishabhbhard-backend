@@ -27,6 +27,9 @@ const catchError_1 = __importDefault(require("../../app/error/catchError"));
 const chatbot_model_2 = __importDefault(require("./chatbot.model"));
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
+const uploadToS3_1 = require("../../utility/uploadToS3");
+const config_1 = __importDefault(require("../../app/config"));
+const deleteFromS3_1 = require("../../utility/deleteFromS3");
 /* ======================== SESSION HELPERS ======================== */
 function sendTextMessageToSession(text) {
     return __awaiter(this, void 0, void 0, function* () {
@@ -194,7 +197,10 @@ const conversationMemoryRecordedIntoDb = (req, userId) => __awaiter(void 0, void
             throw new ApiError_1.default(http_status_1.default.BAD_REQUEST, "Audio file is required", "");
         }
         const bodyData = req.body;
-        const audio_file = file.path.replace(/\\/g, "/");
+        let audio_file = file.path.replace(/\\/g, "/");
+        if (audio_file) {
+            audio_file = yield (0, uploadToS3_1.uploadToS3)(file, config_1.default.file_path);
+        }
         const result = yield chatbot_model_2.default.create(Object.assign(Object.assign({ userId }, bodyData), { audio_file }));
         if (!result) {
             throw new ApiError_1.default(http_status_1.default.INTERNAL_SERVER_ERROR, "Failed to save conversation memory", "");
@@ -248,6 +254,7 @@ const deleteConversationMemoryFromDb = (conversationId) => __awaiter(void 0, voi
             throw new ApiError_1.default(http_status_1.default.NOT_FOUND, "Conversation memory not found", "");
         }
         if (isExist.audio_file) {
+            yield (0, deleteFromS3_1.deleteFromS3)(isExist.audio_file);
             const audioFilePath = path_1.default.join(__dirname, "../../../", isExist.audio_file);
             fs_1.default.unlink(audioFilePath, (err) => { if (err) {
                 console.error("Error deleting audio file:", err);

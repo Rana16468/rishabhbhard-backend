@@ -110,7 +110,7 @@ const  loginAdminAccount:RequestHandler=catchAsync(async(req , res)=>{
     sendRespone(res, {
     success: true,
     statusCode: httpStatus.OK,
-    message: "Successfully  Login",
+    message: "Checked Your Email ",
     data: result,
   });
 
@@ -128,7 +128,9 @@ const   verifiedUser:RequestHandler=catchAsync(async(req , res)=>{
     data: result,
   });
 
-})
+});
+
+
 
 
 const AuthController = {
