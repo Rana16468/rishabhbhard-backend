@@ -1,4 +1,4 @@
-import cors from "cors";
+
 import express from "express";
 import bodyParser from "body-parser";
 import cookieParser from "cookie-parser";
@@ -14,6 +14,7 @@ import auto_delete_unverified_user from "./utility/auto_delete_unverified_user";
 import catchError from "./app/error/catchError";
 import auto_delete_notification from "./utility/auto_delete_notification";
 import autoDeleteChatBotInfo from "./utility/autoDeleteChatBotInfo";
+import { setupCors } from "./cors";
 declare global {
   namespace Express {
     interface Request {
@@ -45,8 +46,7 @@ app.use(
 
 
 
-// ======= CORS =======
-app.use(cors());
+setupCors(app);
 
 // ======= Test Route =======
 app.get("/", (_req, res) => {

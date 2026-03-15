@@ -11,10 +11,7 @@ const auto_delete_notification = async () => {
       createdAt: { $lt: timeThreshold },
     });
 
-    console.log({
-      deletedCount: deleteResult.deletedCount,
-      message: "Old notifications deleted successfully",
-    });
+   
 
     
 

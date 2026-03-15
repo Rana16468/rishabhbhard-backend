@@ -21,10 +21,6 @@ const auto_delete_notification = () => __awaiter(void 0, void 0, void 0, functio
         const deleteResult = yield notification_model_1.default.deleteMany({
             createdAt: { $lt: timeThreshold },
         });
-        console.log({
-            deletedCount: deleteResult.deletedCount,
-            message: "Old notifications deleted successfully",
-        });
         return {
             deletedCount: deleteResult.deletedCount,
             message: "Old notifications deleted successfully",
