@@ -39,3 +39,4 @@ function setupCors(app) {
     app.options(/.*/, (0, cors_1.default)(corsOptions));
     app.use((0, cors_1.default)(corsOptions));
 }
+;

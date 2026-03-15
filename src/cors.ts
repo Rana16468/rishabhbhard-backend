@@ -47,4 +47,5 @@ export function setupCors(app: Application) {
 
   app.options(/.*/, cors(corsOptions));
   app.use(cors(corsOptions));
-}
+};
+
