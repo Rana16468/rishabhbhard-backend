@@ -14,8 +14,7 @@ import auto_delete_unverified_user from "./utility/auto_delete_unverified_user";
 import catchError from "./app/error/catchError";
 import auto_delete_notification from "./utility/auto_delete_notification";
 import autoDeleteChatBotInfo from "./utility/autoDeleteChatBotInfo";
-import cors from 'cors';
-
+import { setupCors } from "./cors";
 declare global {
   namespace Express {
     interface Request {
@@ -47,15 +46,7 @@ app.use(
 
 
 
-app.use(
-  cors({
-    origin: [
-      "http://localhost:3000",
-      "https://rishab-beta.vercel.app",
-    ],
-    credentials: true,
-  })
-);
+setupCors(app);
 
 // ======= Test Route =======
 app.get("/", (_req, res) => {
