@@ -40,7 +40,7 @@ app.use(config_1.default.file_path, express_1.default.static(path_1.default.join
 app.use((0, cors_1.default)({
     origin: [
         "http://localhost:3000",
-        "https://rishab-beta.vercel.app/auth",
+        "https://rishab-beta.vercel.app",
     ],
     credentials: true,
 }));

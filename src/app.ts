@@ -51,7 +51,7 @@ app.use(
   cors({
     origin: [
       "http://localhost:3000",
-      "https://rishab-beta.vercel.app/auth",
+      "https://rishab-beta.vercel.app",
     ],
     credentials: true,
   })
