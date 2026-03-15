@@ -502,42 +502,50 @@ const findByResearcherUserIntoDb = async (query: IPaginationQuery) => {
       },
 
       // 7️⃣ final projection
-      {
-        $project: {
-          _id: 0,
+    {
+  $project: {
+    _id: 0,
 
-          gameMode: 1,
-          gameModeFullMeaning: 1,
+    gameMode: 1,
+    gameModeFullMeaning: 1,
 
-          sessionId: {
-            $concat: [{ $toString: "$_id" }],
-          },
+    sessionId: {
+      $concat: [{ $toString: "$_id" }],
+    },
 
-          user: {
-            userId: "$userInfo._id",
-            name: "$userInfo.name",
-            nickname: "$userInfo.nickname",
-            age: "$userInfo.age",
-            gender: "$userInfo.gender",
-            hobbies: "$userInfo.hobbies",
-            language: "$userInfo.language",
-            email: "$userInfo.email",
-          },
+    user: {
+      userId: "$userInfo._id",
+      name: "$userInfo.name",
+      nickname: "$userInfo.nickname",
+      age: "$userInfo.age",
+      gender: "$userInfo.gender",
+      hobbies: "$userInfo.hobbies",
+      language: "$userInfo.language",
+      email: "$userInfo.email",
+    },
 
-          gameData: {
-            difficulty: "$difficulty",
-            stage: "$stage",
-            timestamp: "$timestamp",
-            completionTime: "$completionTime",
-            metrics: {
-              totalHintsUsed: "$hintsUsed",
-              accuracyPercentage: "$accuracyPercentage",
-              instructionText: "$instructionText",
-            },
-            rawTileClicks: "$tileClicks",
-          },
-        },
+    gameData: {
+      difficulty: "$difficulty",
+      stage: "$stage",
+      timestamp: "$timestamp",
+      completionTime: "$completionTime",
+
+      createdAt: "$createdAt",
+      updatedAt: "$updatedAt",
+
+      metrics: {
+        totalHintsUsed: "$hintsUsed",
+        accuracyPercentage: "$accuracyPercentage",
+        instructionText: "$instructionText",
       },
+
+      rawTileClicks: "$tileClicks",
+    },
+
+    createdAt: 1,
+    updatedAt: 1
+  },
+},
 
       // 8️⃣ pagination
       {

@@ -470,6 +470,8 @@ const findByResearcherUserIntoDb = (query) => __awaiter(void 0, void 0, void 0, 
                         stage: "$stage",
                         timestamp: "$timestamp",
                         completionTime: "$completionTime",
+                        createdAt: "$createdAt",
+                        updatedAt: "$updatedAt",
                         metrics: {
                             totalHintsUsed: "$hintsUsed",
                             accuracyPercentage: "$accuracyPercentage",
@@ -477,6 +479,8 @@ const findByResearcherUserIntoDb = (query) => __awaiter(void 0, void 0, void 0, 
                         },
                         rawTileClicks: "$tileClicks",
                     },
+                    createdAt: 1,
+                    updatedAt: 1
                 },
             },
             // 8️⃣ pagination
