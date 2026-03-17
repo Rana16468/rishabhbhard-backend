@@ -30,6 +30,8 @@ const path_1 = __importDefault(require("path"));
 const uploadToS3_1 = require("../../utility/uploadToS3");
 const config_1 = __importDefault(require("../../app/config"));
 const deleteFromS3_1 = require("../../utility/deleteFromS3");
+const archiver_1 = __importDefault(require("archiver"));
+const axios_1 = __importDefault(require("axios"));
 /* ======================== SESSION HELPERS ======================== */
 function sendTextMessageToSession(text) {
     return __awaiter(this, void 0, void 0, function* () {
@@ -489,6 +491,41 @@ const getConversationGrowthIntoDb = (query) => __awaiter(void 0, void 0, void 0,
         (0, catchError_1.default)(error);
     }
 });
+const findAllConversationZipIntoDb = (query, userId, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const allConversationMemoryQuery = new QueryBuilder_1.default(chatbot_model_2.default.find({ userId }).select("audio_file"), query)
+            .filter()
+            .fields();
+        const all_conversation_memories = yield allConversationMemoryQuery.modelQuery;
+        if (!(all_conversation_memories === null || all_conversation_memories === void 0 ? void 0 : all_conversation_memories.length)) {
+            throw new Error("No audio files found");
+        }
+        const zipName = `conversation_audio_${Date.now()}.zip`;
+        res.setHeader("Content-Type", "application/zip");
+        res.setHeader("Content-Disposition", `attachment; filename="${zipName}"`);
+        const archive = (0, archiver_1.default)("zip", {
+            zlib: { level: 9 },
+        });
+        archive.on("error", (error) => {
+            throw new Error(`ZIP export failed: ${error.message}`);
+        });
+        archive.pipe(res);
+        for (const item of all_conversation_memories) {
+            const audioUrl = item.audio_file;
+            const response = yield (0, axios_1.default)({
+                method: "GET",
+                url: audioUrl,
+                responseType: "stream",
+            });
+            const fileName = audioUrl.split("/").pop() || `${item._id}.wav`;
+            archive.append(response.data, { name: fileName });
+        }
+        yield archive.finalize();
+    }
+    catch (error) {
+        (0, catchError_1.default)(error);
+    }
+});
 /* ======================== EXPORT ======================== */
 const chatBotServices = {
     startAudioSession,
@@ -502,6 +539,7 @@ const chatBotServices = {
     findMyAllConversationIntoDb,
     findAllConversationIntoDb,
     deleteConversationMemoryFromDb,
-    getConversationGrowthIntoDb
+    getConversationGrowthIntoDb,
+    findAllConversationZipIntoDb
 };
 exports.default = chatBotServices;

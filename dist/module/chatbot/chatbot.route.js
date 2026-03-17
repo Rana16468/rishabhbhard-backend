@@ -92,5 +92,6 @@ router.get("/find_my_all_conversation", (0, auth_1.default)(user_constant_1.USER
 router.get("/find_all_conversation/:userId", (0, auth_1.default)(user_constant_1.USER_ROLE.superAdmin, user_constant_1.USER_ROLE.admin), chatbot_controller_1.default.findAllConversation);
 router.delete("/delete_conversation_memory/:id", (0, auth_1.default)(user_constant_1.USER_ROLE.superAdmin, user_constant_1.USER_ROLE.admin), chatbot_controller_1.default.deleteConversationMemory);
 router.get("/conversation_growth", (0, auth_1.default)(user_constant_1.USER_ROLE.superAdmin, user_constant_1.USER_ROLE.admin), chatbot_controller_1.default.getConversationGrowth);
+router.get("/find_by_all_conversation_zip/:userId", (0, auth_1.default)(user_constant_1.USER_ROLE.superAdmin, user_constant_1.USER_ROLE.admin), chatbot_controller_1.default.findAllConversationZip);
 exports.chatBotRoutes = router;
 exports.default = router;

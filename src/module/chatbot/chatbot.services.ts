@@ -14,10 +14,9 @@ import {
 } from "../../utility/Ai_Integation/AI_Integation";
 import ChatHistoryModel from "./chatbot.model";
 import catchError from "../../app/error/catchError";
-import { Part } from "@google/genai";
-import { partialUtil } from "zod/lib/helpers/partialUtil";
+
 import { IChatHistory } from "./chatbot.interface";
-import { Request } from "express";
+import { Request, Response } from "express";
 import conversationmemorys from "./chatbot.model";
 
 import fs from "fs";
@@ -25,6 +24,10 @@ import path from "path";
 import { uploadToS3 } from "../../utility/uploadToS3";
 import config from "../../app/config";
 import { deleteFromS3 } from "../../utility/deleteFromS3";
+
+import archiver from "archiver";
+import axios from "axios";
+
 
 /* ======================== INTERFACES ======================== */
 export interface UserProfile {
@@ -701,6 +704,67 @@ const buildSummary = (
     };
   } catch (error) {
     catchError(error);
+
+  }
+};
+
+
+const findAllConversationZipIntoDb = async (
+  query: Record<string, unknown>,
+  userId: string,
+  res: Response
+) => {
+  try {
+    const allConversationMemoryQuery = new QueryBuilder(
+      conversationmemorys.find({ userId }).select("audio_file"),
+      query
+    )
+      .filter()
+      .fields();
+
+    const all_conversation_memories =
+      await allConversationMemoryQuery.modelQuery;
+
+    if (!all_conversation_memories?.length) {
+      throw new Error("No audio files found");
+    }
+
+    const zipName = `conversation_audio_${Date.now()}.zip`;
+
+    res.setHeader("Content-Type", "application/zip");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${zipName}"`
+    );
+
+    const archive = archiver("zip", {
+      zlib: { level: 9 },
+    });
+
+    archive.on("error", (error: Error) => {
+      throw new Error(`ZIP export failed: ${error.message}`);
+    });
+
+    archive.pipe(res);
+
+    for (const item  of all_conversation_memories) {
+      const audioUrl = item.audio_file as string;
+
+      const response = await axios({
+        method: "GET",
+        url: audioUrl,
+        responseType: "stream",
+      });
+
+      const fileName =
+        audioUrl.split("/").pop() || `${item._id}.wav`;
+
+      archive.append(response.data, { name: fileName });
+    }
+
+    await archive.finalize();
+  } catch (error) {
+    catchError(error);
   }
 };
 
@@ -720,7 +784,8 @@ const chatBotServices = {
  findMyAllConversationIntoDb ,
  findAllConversationIntoDb,
   deleteConversationMemoryFromDb,
-   getConversationGrowthIntoDb
+   getConversationGrowthIntoDb,
+   findAllConversationZipIntoDb
 };
 
 export default chatBotServices;

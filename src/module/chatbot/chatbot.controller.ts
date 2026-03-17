@@ -173,6 +173,20 @@ const getConversationGrowth:RequestHandler=catchAsync(async(req , res)=>{
       });
 });
 
+const  findAllConversationZip:RequestHandler=catchAsync(async(req , res)=>{
+ const result=await chatBotServices.findAllConversationZipIntoDb(req.query, req.params.userId, res);
+      sendRespone(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: "successfully get conversation growth",
+        data: result,
+      });
+
+
+});
+
+
+
 const chatBotController = {
   textToTextChat,
   getChatHistory,
@@ -182,7 +196,8 @@ const chatBotController = {
     findMyAllConversation,
     findAllConversation,
     deleteConversationMemory,
-     getConversationGrowth
+     getConversationGrowth,
+     findAllConversationZip
 };
 
 export default chatBotController;
