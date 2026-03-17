@@ -38,6 +38,9 @@ export interface TTileGame extends TBaseGame {
   audioClipId?: never;
   recordingId?: never;
   playerResponse?: never;
+  valid_words?:string[];
+  invalid_words?:string[];
+
 }
 
 // ==============================

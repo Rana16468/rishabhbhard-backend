@@ -95,6 +95,9 @@ const vfGameDataSchema = z.object({
   recordingId: z.string({ required_error: "recordingId is required" }),
   playerResponse: z.string({ required_error: "playerResponse is required" }),
   repeatButtonClicks: z.array(z.number()).optional(),
+   valid_words: z.array(z.string()).optional(),
+   invalid_words: z.array(z.string()).optional()
+
     })
 });
 

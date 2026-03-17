@@ -85,6 +85,16 @@ const TGameOneSchema = new Schema<TGameOne, UserModel>(
       type: [Number], 
       default: [] 
     },
+    valid_words:{
+      type: [String],
+      required:false,
+      default:[]
+    },
+    invalid_words:{
+       type: [String],
+      required:false,
+      default:[]
+    },
 
     isDelete: { type: Boolean, default: false },
   },

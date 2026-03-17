@@ -375,19 +375,20 @@ interface IPaginationQuery {
 
 
 
-const findByResearcherUserIntoDb = async (query: IPaginationQuery) => {
+
+
+export const findByResearcherUserIntoDb = async (query: IPaginationQuery) => {
   try {
     const page = Number(query.page) || 1;
     const limit = Number(query.limit) || 10;
     const skip = (page - 1) * limit;
-
     const searchTerm = query.searchTerm || "";
 
     const result = await gameone.aggregate([
       // 1️⃣ filter non-deleted games
       { $match: { isDelete: false } },
 
-      // 2️⃣ join user collection
+      // 2️⃣ join users collection
       {
         $lookup: {
           from: "users",
@@ -409,7 +410,6 @@ const findByResearcherUserIntoDb = async (query: IPaginationQuery) => {
           as: "userInfo",
         },
       },
-
       { $unwind: { path: "$userInfo", preserveNullAndEmptyArrays: true } },
 
       // 3️⃣ search filter
@@ -446,7 +446,12 @@ const findByResearcherUserIntoDb = async (query: IPaginationQuery) => {
               { $gt: ["$totalClicks", 0] },
               {
                 $round: [
-                  { $multiply: [{ $divide: ["$correctClicks", "$totalClicks"] }, 100] },
+                  {
+                    $multiply: [
+                      { $divide: ["$correctClicks", "$totalClicks"] },
+                      100,
+                    ],
+                  },
                   2,
                 ],
               },
@@ -472,13 +477,12 @@ const findByResearcherUserIntoDb = async (query: IPaginationQuery) => {
         },
       },
 
-      // 7️⃣ final projection
+      // 7️⃣ final projection including VF specific fields
       {
         $project: {
           _id: 0,
           gameMode: 1,
           gameModeFullMeaning: 1,
-
           sessionId: { $toString: "$_id" },
 
           user: {
@@ -499,16 +503,20 @@ const findByResearcherUserIntoDb = async (query: IPaginationQuery) => {
             completionTime: "$completionTime",
             createdAt: "$createdAt",
             updatedAt: "$updatedAt",
+
             metrics: {
               totalHintsUsed: "$hintsUsed",
               accuracyPercentage: "$accuracyPercentage",
               instructionText: "$instructionText",
             },
+
             rawTileClicks: "$tileClicks",
 
-            // 8️⃣ VF specific fields
+            // VF specific
             playerResponse: "$playerResponse",
             audioClipUrl: "$audioClipUrl",
+            valid_words: "$valid_words",
+            invalid_words: "$invalid_words",
           },
 
           createdAt: 1,
@@ -516,7 +524,7 @@ const findByResearcherUserIntoDb = async (query: IPaginationQuery) => {
         },
       },
 
-      // 9️⃣ pagination
+      // 8️⃣ pagination using $facet
       {
         $facet: {
           data: [{ $skip: skip }, { $limit: limit }],
@@ -525,18 +533,23 @@ const findByResearcherUserIntoDb = async (query: IPaginationQuery) => {
       },
     ]);
 
+    const totalRecords = result[0]?.meta[0]?.total || 0;
+
     return {
       researchRequestID: `req_${Date.now()}`,
       exportDate: new Date().toISOString(),
       page,
       limit,
-      result,
+      totalRecords,
+      data: result[0]?.data || [],
     };
   } catch (error) {
     catchError(error);
   }
 };
-const findBySpecificResearcherUserIntoDb = async (
+
+
+export const findBySpecificResearcherUserIntoDb = async (
   query: IPaginationQuery,
   userId: string
 ) => {
@@ -548,7 +561,7 @@ const findBySpecificResearcherUserIntoDb = async (
     const searchTerm = query.searchTerm || "";
 
     const result = await gameone.aggregate([
-      // 1️⃣ filter non-deleted games + specific user
+      // 1️⃣ filter non-deleted games for specific user
       {
         $match: {
           isDelete: false,
@@ -556,19 +569,13 @@ const findBySpecificResearcherUserIntoDb = async (
         },
       },
 
-      // 2️⃣ join user collection
+      // 2️⃣ join users collection
       {
         $lookup: {
           from: "users",
           let: { uid: "$userId" },
           pipeline: [
-            {
-              $match: {
-                $expr: {
-                  $eq: ["$_id", "$$uid"],
-                },
-              },
-            },
+            { $match: { $expr: { $eq: ["$_id", "$$uid"] } } },
             {
               $project: {
                 name: 1,
@@ -584,13 +591,7 @@ const findBySpecificResearcherUserIntoDb = async (
           as: "userInfo",
         },
       },
-
-      {
-        $unwind: {
-          path: "$userInfo",
-          preserveNullAndEmptyArrays: true,
-        },
-      },
+      { $unwind: { path: "$userInfo", preserveNullAndEmptyArrays: true } },
 
       // 3️⃣ search filter
       {
@@ -605,9 +606,7 @@ const findBySpecificResearcherUserIntoDb = async (
       // 4️⃣ compute click metrics
       {
         $addFields: {
-          totalClicks: {
-            $size: { $ifNull: ["$tileClicks", []] },
-          },
+          totalClicks: { $size: { $ifNull: ["$tileClicks", []] } },
           correctClicks: {
             $size: {
               $filter: {
@@ -643,24 +642,15 @@ const findBySpecificResearcherUserIntoDb = async (
         },
       },
 
-      // 6️⃣ game mode meaning
+      // 6️⃣ game mode full meaning
       {
         $addFields: {
           gameModeFullMeaning: {
             $switch: {
               branches: [
-                {
-                  case: { $eq: ["$gameMode", "OC"] },
-                  then: "Object Categorisation (Find Game)",
-                },
-                {
-                  case: { $eq: ["$gameMode", "UOT"] },
-                  then: "Utility Of Things (Match Game)",
-                },
-                {
-                  case: { $eq: ["$gameMode", "VF"] },
-                  then: "Verbal Fluency (Speak Game)",
-                },
+                { case: { $eq: ["$gameMode", "OC"] }, then: "Object Categorisation (Find Game)" },
+                { case: { $eq: ["$gameMode", "UOT"] }, then: "Utility Of Things (Match Game)" },
+                { case: { $eq: ["$gameMode", "VF"] }, then: "Verbal Fluency (Speak Game)" },
               ],
               default: "$gameMode",
             },
@@ -668,16 +658,13 @@ const findBySpecificResearcherUserIntoDb = async (
         },
       },
 
-      // 7️⃣ final projection
+      // 7️⃣ projection including VF extra fields
       {
         $project: {
           _id: 0,
           gameMode: 1,
           gameModeFullMeaning: 1,
-
-          sessionId: {
-            $toString: "$_id",
-          },
+          sessionId: { $toString: "$_id" },
 
           user: {
             userId: "$userInfo._id",
@@ -695,7 +682,6 @@ const findBySpecificResearcherUserIntoDb = async (
             stage: "$stage",
             timestamp: "$timestamp",
             completionTime: "$completionTime",
-
             createdAt: "$createdAt",
             updatedAt: "$updatedAt",
 
@@ -706,6 +692,12 @@ const findBySpecificResearcherUserIntoDb = async (
             },
 
             rawTileClicks: "$tileClicks",
+
+            // VF specific fields
+            playerResponse: "$playerResponse",
+            audioClipUrl: "$audioClipUrl",
+            valid_words: "$valid_words",
+            invalid_words: "$invalid_words",
           },
 
           createdAt: 1,
@@ -722,18 +714,20 @@ const findBySpecificResearcherUserIntoDb = async (
       },
     ]);
 
+    const totalRecords = result[0]?.meta[0]?.total || 0;
+
     return {
       researchRequestID: `req_${Date.now()}`,
       exportDate: new Date().toISOString(),
       page,
       limit,
-      result,
+      totalRecords,
+      data: result[0]?.data || [],
     };
   } catch (error) {
     catchError(error);
   }
 };
-
 const findByAllDownloadResearcherUserIntoDb = async (query: IPaginationQuery) => {
   try {
     const searchTerm = query.searchTerm || "";

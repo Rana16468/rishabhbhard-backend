@@ -74,6 +74,8 @@ const vfGameDataSchema = zod_1.z.object({
         recordingId: zod_1.z.string({ required_error: "recordingId is required" }),
         playerResponse: zod_1.z.string({ required_error: "playerResponse is required" }),
         repeatButtonClicks: zod_1.z.array(zod_1.z.number()).optional(),
+        valid_words: zod_1.z.array(zod_1.z.string()).optional(),
+        invalid_words: zod_1.z.array(zod_1.z.string()).optional()
     })
 });
 const GameOneValidationSchema = {
