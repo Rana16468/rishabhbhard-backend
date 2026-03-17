@@ -61,11 +61,41 @@ const findByResearcherUser = (0, catchAsync_1.default)((req, res) => __awaiter(v
         data: result
     });
 }));
+const findBySpecificResearcherUser = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const result = yield gameone_services_1.default.findBySpecificResearcherUserIntoDb(req.query, req.params.userId);
+    (0, sendRespone_1.default)(res, {
+        success: true,
+        statusCode: http_status_1.default.OK,
+        message: "Successfully Specific Find By Researcher Data",
+        data: result
+    });
+}));
+const findByAllDownloadResearcherUser = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const result = yield gameone_services_1.default.findByAllDownloadResearcherUserIntoDb(req.query);
+    (0, sendRespone_1.default)(res, {
+        success: true,
+        statusCode: http_status_1.default.OK,
+        message: "Successfully  Find All Download Data",
+        data: result
+    });
+}));
+const downloadBySpeckGame = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const result = yield gameone_services_1.default.downloadBySpeckGameIntoDb(req.params.userId, req.query, res);
+    (0, sendRespone_1.default)(res, {
+        success: true,
+        statusCode: http_status_1.default.OK,
+        message: "Successfully  Find All Download audio Data",
+        data: result
+    });
+}));
 const GameOneController = {
     recordedGameOneData,
     myGameLevel,
     deleteGameOneData,
     trackingSummary,
-    findByResearcherUser
+    findByResearcherUser,
+    findBySpecificResearcherUser,
+    findByAllDownloadResearcherUser,
+    downloadBySpeckGame
 };
 exports.default = GameOneController;

@@ -51,5 +51,8 @@ route.get("/my_game_level", (0, auth_1.default)(user_constant_1.USER_ROLE.user),
 route.delete("/delete_game_one/:id", (0, auth_1.default)(user_constant_1.USER_ROLE.admin, user_constant_1.USER_ROLE.superAdmin), gameone_controller_1.default.deleteGameOneData);
 route.get("/my_tracking_summary", (0, auth_1.default)(user_constant_1.USER_ROLE.user, user_constant_1.USER_ROLE.admin), gameone_controller_1.default.trackingSummary);
 route.get("/find_by_researcher_user", (0, auth_1.default)(user_constant_1.USER_ROLE.admin, user_constant_1.USER_ROLE.superAdmin), gameone_controller_1.default.findByResearcherUser);
+route.get("/find_by_specific_researcherUser/:userId", (0, auth_1.default)(user_constant_1.USER_ROLE.admin, user_constant_1.USER_ROLE.superAdmin), gameone_controller_1.default.findBySpecificResearcherUser);
+route.get("/find_by_all_download_researcher_user", (0, auth_1.default)(user_constant_1.USER_ROLE.admin, user_constant_1.USER_ROLE.superAdmin), gameone_controller_1.default.findByAllDownloadResearcherUser);
+route.get("/find_by_download_by_speckGame/:userId", (0, auth_1.default)(user_constant_1.USER_ROLE.admin, user_constant_1.USER_ROLE.superAdmin), gameone_controller_1.default.downloadBySpeckGame);
 const gameOneRoute = route;
 exports.default = gameOneRoute;

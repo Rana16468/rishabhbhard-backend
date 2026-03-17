@@ -1,4 +1,4 @@
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { USER_ROLE } from './user.constant';
 
 export interface UserResponse {
@@ -25,6 +25,8 @@ export type TUser = {
   photo?: string;
   fcm?: string;
   isTramsAndConditions:boolean;
+  audioClipUrl? : string
+  _id?: Types.ObjectId
 
   isDelete: boolean;
 };

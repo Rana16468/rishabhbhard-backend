@@ -68,6 +68,10 @@ route.get("/my_game_level", auth(USER_ROLE.user), GameOneController.myGameLevel)
 route.delete("/delete_game_one/:id", auth(USER_ROLE.admin, USER_ROLE.superAdmin), GameOneController.deleteGameOneData);
 route.get("/my_tracking_summary", auth(USER_ROLE.user, USER_ROLE.admin), GameOneController.trackingSummary);
 route.get("/find_by_researcher_user", auth(USER_ROLE.admin, USER_ROLE.superAdmin), GameOneController.findByResearcherUser)
+route.get("/find_by_specific_researcherUser/:userId",  auth(USER_ROLE.admin, USER_ROLE.superAdmin), GameOneController.findBySpecificResearcherUser )
+route.get("/find_by_all_download_researcher_user",  auth(USER_ROLE.admin, USER_ROLE.superAdmin), GameOneController.findByAllDownloadResearcherUser);
+route.get("/find_by_download_by_speckGame/:userId", auth(USER_ROLE.admin, USER_ROLE.superAdmin),GameOneController.downloadBySpeckGame);
+
 
 
 const gameOneRoute=route;

@@ -69,7 +69,50 @@ const findByResearcherUser:RequestHandler=catchAsync(async(req , res)=>{
     data: result
   });
 
+});
+
+
+const findBySpecificResearcherUser:RequestHandler=catchAsync(async(req , res)=>{
+
+     const result=await GameOneServices.findBySpecificResearcherUserIntoDb (req.query, req.params.userId);
+    sendRespone(res, {
+    success: true,
+    statusCode: httpStatus.OK,
+    message: "Successfully Specific Find By Researcher Data",
+    data: result
+  });
+});
+
+
+
+const findByAllDownloadResearcherUser:RequestHandler=catchAsync(async(req , res)=>{
+
+    const result=await GameOneServices.findByAllDownloadResearcherUserIntoDb(req.query);
+
+       sendRespone(res, {
+    success: true,
+    statusCode: httpStatus.OK,
+    message: "Successfully  Find All Download Data",
+    data: result
+  });
+});
+
+
+
+const  downloadBySpeckGame:RequestHandler=catchAsync(async(req , res)=>{
+
+    const  result= await GameOneServices.downloadBySpeckGameIntoDb(req.params.userId, req.query, res);
+
+       sendRespone(res, {
+    success: true,
+    statusCode: httpStatus.OK,
+    message: "Successfully  Find All Download audio Data",
+    data: result
+  });
+
 })
+
+
 
 
 const  GameOneController ={
@@ -77,7 +120,10 @@ const  GameOneController ={
     myGameLevel,
      deleteGameOneData,
      trackingSummary,
-     findByResearcherUser
+     findByResearcherUser,
+     findBySpecificResearcherUser,
+     findByAllDownloadResearcherUser,
+     downloadBySpeckGame
 };
 
 export default GameOneController;
