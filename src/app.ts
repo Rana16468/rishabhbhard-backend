@@ -5,7 +5,7 @@ import cookieParser from "cookie-parser";
 import path from "path";
 import config from "./app/config";
 import cron from 'node-cron'
-
+import cors from "cors";
 // import cron from 'node-cron';
 import router from "./router";
 import notFound from "./middleware/notFound";
@@ -14,7 +14,7 @@ import auto_delete_unverified_user from "./utility/auto_delete_unverified_user";
 import catchError from "./app/error/catchError";
 import auto_delete_notification from "./utility/auto_delete_notification";
 import autoDeleteChatBotInfo from "./utility/autoDeleteChatBotInfo";
-import { setupCors } from "./cors";
+// import { setupCors } from "./cors";
 declare global {
   namespace Express {
     interface Request {
@@ -27,6 +27,7 @@ const app = express();
 
 // ======= Middlewares =======
 app.use(cookieParser());
+app.use(cors())
 
 app.use(
   bodyParser.json({
@@ -46,7 +47,7 @@ app.use(
 
 
 
-setupCors(app);
+
 
 // ======= Test Route =======
 app.get("/", (_req, res) => {
