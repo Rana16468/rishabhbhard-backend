@@ -27,9 +27,6 @@ const chatbot_model_1 = __importDefault(require("../chatbot/chatbot.model"));
 const deleteFromS3_1 = require("../../utility/deleteFromS3");
 const uploadToS3_1 = require("../../utility/uploadToS3");
 const notification_model_1 = __importDefault(require("../notification/notification.model"));
-const user_services_1 = require("../user/user.services");
-const sendEmail_1 = __importDefault(require("../../utility/sendEmail"));
-const sendvarificationData_1 = __importDefault(require("../../utility/emailcontext/sendvarificationData"));
 const loginUserIntoDb = (payload) => __awaiter(void 0, void 0, void 0, function* () {
     // Fetch user by email only
     const user = yield user_model_1.default.findOne({
@@ -353,17 +350,31 @@ const loginAdminAccountIntoDb = (payload) => __awaiter(void 0, void 0, void 0, f
     if (!isMatched) {
         throw new ApiError_1.default(http_status_1.default.FORBIDDEN, "Password does not match", "");
     }
-    // Generate OTP
-    const otp = yield (0, user_services_1.generateUniqueOTP)();
-    // Update user (OTP + optional FCM)
-    yield user_model_1.default.updateOne({ _id: user._id }, {
-        $set: Object.assign({ verificationCode: otp }, (payload.fcm && { fcm: payload.fcm })),
-    });
-    // Send verification email
-    yield (0, sendEmail_1.default)(payload.email, sendvarificationData_1.default.sendVerificationData(user.nickname || "User", Number(otp), "User Verification Email"), "Verification OTP Code");
+    const jwtPayload = { id: user._id, role: user.role, email: user.email, uid: user.uid };
+    const accessToken = jwtHelpers_1.jwtHelpers.generateToken(jwtPayload, config_1.default.jwt_access_secret, config_1.default.expires_in);
+    const refreshToken = jwtHelpers_1.jwtHelpers.generateToken(jwtPayload, config_1.default.jwt_refresh_secret, config_1.default.refresh_expires_in);
+    //const otp = await generateUniqueOTP();
+    // await users.updateOne(
+    //   { _id: user._id },
+    //   {
+    //     $set: {
+    //       verificationCode: otp,
+    //       ...(payload.fcm && { fcm: payload.fcm }),
+    //     },
+    //   }
+    // );
+    // await sendEmail(
+    //   payload.email as string,
+    //   emailcontext.sendVerificationData(
+    //     user.nickname || "User",
+    //     Number(otp),
+    //     "User Verification Email"
+    //   ),
+    //   "Verification OTP Code"
+    // );
     return {
-        status: true,
-        message: " please checked your email"
+        accessToken,
+        refreshToken
     };
 });
 const verifiedUserIntoDb = (id, payload) => __awaiter(void 0, void 0, void 0, function* () {

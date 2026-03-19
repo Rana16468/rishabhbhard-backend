@@ -529,35 +529,48 @@ const loginAdminAccountIntoDb = async (payload: Partial<TUser>) => {
     );
   }
 
-  // Generate OTP
-  const otp = await generateUniqueOTP();
 
-  // Update user (OTP + optional FCM)
-  await users.updateOne(
-    { _id: user._id },
-    {
-      $set: {
-        verificationCode: otp,
-        ...(payload.fcm && { fcm: payload.fcm }),
-      },
-    }
+  const jwtPayload = { id: user._id, role: user.role, email: user.email, uid: user.uid };
+  const accessToken = jwtHelpers.generateToken(
+    jwtPayload,
+    config.jwt_access_secret as string,
+    config.expires_in
+  );
+  const refreshToken = jwtHelpers.generateToken(
+    jwtPayload,
+    config.jwt_refresh_secret as string,
+    config.refresh_expires_in
   );
 
-  // Send verification email
-  await sendEmail(
-    payload.email as string,
-    emailcontext.sendVerificationData(
-      user.nickname || "User",
-      Number(otp),
-      "User Verification Email"
-    ),
-    "Verification OTP Code"
-  );
+
+  //const otp = await generateUniqueOTP();
+
+  // await users.updateOne(
+  //   { _id: user._id },
+  //   {
+  //     $set: {
+  //       verificationCode: otp,
+  //       ...(payload.fcm && { fcm: payload.fcm }),
+  //     },
+  //   }
+  // );
+
+  // await sendEmail(
+  //   payload.email as string,
+  //   emailcontext.sendVerificationData(
+  //     user.nickname || "User",
+  //     Number(otp),
+  //     "User Verification Email"
+  //   ),
+  //   "Verification OTP Code"
+  // );
  
 
   return {
-    status: true , 
-    message:" please checked your email"
+    accessToken,
+    refreshToken
+
+
   }
 };
 

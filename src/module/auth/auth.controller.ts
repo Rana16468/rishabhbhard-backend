@@ -107,6 +107,11 @@ const getUserGrowth: RequestHandler = catchAsync(async (req, res) => {
 const  loginAdminAccount:RequestHandler=catchAsync(async(req , res)=>{
 
     const result=await AuthServices.loginAdminAccountIntoDb(req.body);
+
+    res.cookie("refreshToken",  result.refreshToken, {
+    secure: config.NODE_ENV === "production",
+    httpOnly: true,
+  });
     sendRespone(res, {
     success: true,
     statusCode: httpStatus.OK,
