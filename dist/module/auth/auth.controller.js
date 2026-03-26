@@ -104,7 +104,7 @@ const loginAdminAccount = (0, catchAsync_1.default)((req, res) => __awaiter(void
     (0, sendRespone_1.default)(res, {
         success: true,
         statusCode: http_status_1.default.OK,
-        message: "Checked Your Email ",
+        message: "Login Successfully ",
         data: result,
     });
 }));

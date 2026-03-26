@@ -115,7 +115,7 @@ const  loginAdminAccount:RequestHandler=catchAsync(async(req , res)=>{
     sendRespone(res, {
     success: true,
     statusCode: httpStatus.OK,
-    message: "Checked Your Email ",
+    message: "Login Successfully ",
     data: result,
   });
 
