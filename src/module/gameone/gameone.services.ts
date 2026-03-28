@@ -154,7 +154,7 @@ const trackingSummaryIntoDb = async (
         },
       },
 
-      // 2️⃣ Lookup user info — handle both ObjectId and string userId
+      // 2️⃣ Lookup user info
       {
         $lookup: {
           from: "users",
@@ -176,7 +176,12 @@ const trackingSummaryIntoDb = async (
       },
       { $unwind: { path: "$userInfo", preserveNullAndEmptyArrays: true } },
 
-      // 3️⃣ Group by gameMode
+      // 3️⃣ Sort to ensure latestGame works correctly
+      {
+        $sort: { createdAt: 1 },
+      },
+
+      // 4️⃣ Group by gameMode
       {
         $group: {
           _id: "$gameMode",
@@ -184,22 +189,30 @@ const trackingSummaryIntoDb = async (
           totalRuns: { $sum: 1 },
           avgCompletionTime: { $avg: "$completionTime" },
           latestGame: { $last: "$$ROOT" },
-          // ✅ Capture userId and userName at group level directly
+
           userId: { $first: "$userId" },
           userName: { $first: "$userInfo.nickname" },
         },
       },
 
-      // 4️⃣ Project compact summary per gameMode
+      // 5️⃣ Project per gameMode
       {
         $project: {
           _id: 0,
           gameMode: "$_id",
-          userId: 1,       // ✅ from group stage
-          userName: 1,     // ✅ from group stage
+          userId: 1,
+          userName: 1,
           highestDifficultyUnlocked: 1,
           totalRuns: 1,
-          averageCompletionTime: { $round: ["$avgCompletionTime", 2] },
+          averageCompletionTime: {
+            $cond: [
+              { $ifNull: ["$avgCompletionTime", false] },
+              { $round: ["$avgCompletionTime", 2] },
+              null,
+            ],
+          },
+
+          // ✅ OC & UOT rating
           latestRating: {
             $cond: [
               { $in: ["$_id", ["OC", "UOT"]] },
@@ -239,12 +252,14 @@ const trackingSummaryIntoDb = async (
                     0,
                   ],
                 },
+
                 speedScore: {
                   $round: [
                     { $subtract: [100, { $ifNull: ["$latestGame.completionTime", 0] }] },
                     2,
                   ],
                 },
+
                 accuracyScore: {
                   $round: [
                     {
@@ -280,6 +295,7 @@ const trackingSummaryIntoDb = async (
                     2,
                   ],
                 },
+
                 efficiencyScore: {
                   $round: [
                     {
@@ -319,6 +335,8 @@ const trackingSummaryIntoDb = async (
               "$$REMOVE",
             ],
           },
+
+          // ✅ VF fields
           latestAudioTranscription: {
             $cond: [
               { $eq: ["$_id", "VF"] },
@@ -326,10 +344,26 @@ const trackingSummaryIntoDb = async (
               "$$REMOVE",
             ],
           },
+
+          validWords: {
+            $cond: [
+              { $eq: ["$_id", "VF"] },
+              { $ifNull: ["$latestGame.valid_words", []] },
+              "$$REMOVE",
+            ],
+          },
+
+          invalidWords: {
+            $cond: [
+              { $eq: ["$_id", "VF"] },
+              { $ifNull: ["$latestGame.invalid_words", []] },
+              "$$REMOVE",
+            ],
+          },
         },
       },
 
-      // 5️⃣ Reformat into user-level object
+      // 6️⃣ Group into user-level object
       {
         $group: {
           _id: null,
@@ -344,13 +378,15 @@ const trackingSummaryIntoDb = async (
                 averageCompletionTime: "$averageCompletionTime",
                 latestRating: "$latestRating",
                 latestAudioTranscription: "$latestAudioTranscription",
+                validWords: "$validWords",
+                invalidWords: "$invalidWords",
               },
             },
           },
         },
       },
 
-      // 6️⃣ Final shape
+      // 7️⃣ Final format
       {
         $project: {
           _id: 0,
@@ -363,10 +399,10 @@ const trackingSummaryIntoDb = async (
 
     return result[0] || { userId: `usr_${userId}`, gameProgress: {} };
   } catch (error) {
-    catchError(error);
+    console.error(error);
+    throw error;
   }
 };
-
 interface IPaginationQuery {
   page?: number;
   limit?: number;

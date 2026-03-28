@@ -146,7 +146,7 @@ const trackingSummaryIntoDb = (query, userId) => __awaiter(void 0, void 0, void 
                     userId: objectUserId,
                 },
             },
-            // 2️⃣ Lookup user info — handle both ObjectId and string userId
+            // 2️⃣ Lookup user info
             {
                 $lookup: {
                     from: "users",
@@ -167,7 +167,11 @@ const trackingSummaryIntoDb = (query, userId) => __awaiter(void 0, void 0, void 
                 },
             },
             { $unwind: { path: "$userInfo", preserveNullAndEmptyArrays: true } },
-            // 3️⃣ Group by gameMode
+            // 3️⃣ Sort to ensure latestGame works correctly
+            {
+                $sort: { createdAt: 1 },
+            },
+            // 4️⃣ Group by gameMode
             {
                 $group: {
                     _id: "$gameMode",
@@ -175,21 +179,27 @@ const trackingSummaryIntoDb = (query, userId) => __awaiter(void 0, void 0, void 
                     totalRuns: { $sum: 1 },
                     avgCompletionTime: { $avg: "$completionTime" },
                     latestGame: { $last: "$$ROOT" },
-                    // ✅ Capture userId and userName at group level directly
                     userId: { $first: "$userId" },
                     userName: { $first: "$userInfo.nickname" },
                 },
             },
-            // 4️⃣ Project compact summary per gameMode
+            // 5️⃣ Project per gameMode
             {
                 $project: {
                     _id: 0,
                     gameMode: "$_id",
-                    userId: 1, // ✅ from group stage
-                    userName: 1, // ✅ from group stage
+                    userId: 1,
+                    userName: 1,
                     highestDifficultyUnlocked: 1,
                     totalRuns: 1,
-                    averageCompletionTime: { $round: ["$avgCompletionTime", 2] },
+                    averageCompletionTime: {
+                        $cond: [
+                            { $ifNull: ["$avgCompletionTime", false] },
+                            { $round: ["$avgCompletionTime", 2] },
+                            null,
+                        ],
+                    },
+                    // ✅ OC & UOT rating
                     latestRating: {
                         $cond: [
                             { $in: ["$_id", ["OC", "UOT"]] },
@@ -309,6 +319,7 @@ const trackingSummaryIntoDb = (query, userId) => __awaiter(void 0, void 0, void 
                             "$$REMOVE",
                         ],
                     },
+                    // ✅ VF fields
                     latestAudioTranscription: {
                         $cond: [
                             { $eq: ["$_id", "VF"] },
@@ -316,9 +327,23 @@ const trackingSummaryIntoDb = (query, userId) => __awaiter(void 0, void 0, void 
                             "$$REMOVE",
                         ],
                     },
+                    validWords: {
+                        $cond: [
+                            { $eq: ["$_id", "VF"] },
+                            { $ifNull: ["$latestGame.valid_words", []] },
+                            "$$REMOVE",
+                        ],
+                    },
+                    invalidWords: {
+                        $cond: [
+                            { $eq: ["$_id", "VF"] },
+                            { $ifNull: ["$latestGame.invalid_words", []] },
+                            "$$REMOVE",
+                        ],
+                    },
                 },
             },
-            // 5️⃣ Reformat into user-level object
+            // 6️⃣ Group into user-level object
             {
                 $group: {
                     _id: null,
@@ -333,12 +358,14 @@ const trackingSummaryIntoDb = (query, userId) => __awaiter(void 0, void 0, void 
                                 averageCompletionTime: "$averageCompletionTime",
                                 latestRating: "$latestRating",
                                 latestAudioTranscription: "$latestAudioTranscription",
+                                validWords: "$validWords",
+                                invalidWords: "$invalidWords",
                             },
                         },
                     },
                 },
             },
-            // 6️⃣ Final shape
+            // 7️⃣ Final format
             {
                 $project: {
                     _id: 0,
@@ -351,7 +378,8 @@ const trackingSummaryIntoDb = (query, userId) => __awaiter(void 0, void 0, void 
         return result[0] || { userId: `usr_${userId}`, gameProgress: {} };
     }
     catch (error) {
-        (0, catchError_1.default)(error);
+        console.error(error);
+        throw error;
     }
 });
 const findByResearcherUserIntoDb = (query) => __awaiter(void 0, void 0, void 0, function* () {
