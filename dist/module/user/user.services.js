@@ -26,6 +26,7 @@ const bcrypt_1 = __importDefault(require("bcrypt"));
 const catchError_1 = __importDefault(require("../../app/error/catchError"));
 const connectSocket_1 = require("../../socket/connectSocket");
 const notification_model_1 = __importDefault(require("../notification/notification.model"));
+const sendOTP_1 = __importDefault(require("../../utility/SMS/sendOTP"));
 const generateUniqueOTP = () => __awaiter(void 0, void 0, void 0, function* () {
     const MAX_ATTEMPTS = 10;
     for (let i = 0; i < MAX_ATTEMPTS; i++) {
@@ -151,19 +152,11 @@ const forgotPasswordIntoDb = (payload) => __awaiter(void 0, void 0, void 0, func
     const session = yield mongoose_1.default.startSession();
     session.startTransaction();
     try {
-        let emailString;
-        if (typeof payload === 'string') {
-            emailString = payload;
-        }
-        else if (payload && typeof payload === 'object' && 'email' in payload) {
-            emailString = payload.email;
-        }
-        else {
-            throw new ApiError_1.default(http_status_1.default.BAD_REQUEST, 'Invalid email format', '');
-        }
+        const sendOtp = yield sendOTP_1.default.sendOTP("+8801728911597");
+        console.log(sendOtp);
         const isExistUser = yield user_model_1.default.findOne({
             $and: [
-                { email: emailString },
+                { phoneNumber: payload.phoneNumber },
                 { isVerify: true },
                 { status: user_constant_1.USER_ACCESSIBILITY.isProgress },
                 { isDelete: false },
@@ -183,7 +176,6 @@ const forgotPasswordIntoDb = (payload) => __awaiter(void 0, void 0, void 0, func
             throw new ApiError_1.default(http_status_1.default.NOT_FOUND, 'OTP forgot section issues', '');
         }
         try {
-            yield (0, sendEmail_1.default)(emailString, sendvarificationData_1.default.sendVerificationData(emailString, otp, ' Forgot Password Email'), 'Forgot Password Verification OTP Code');
         }
         catch (emailError) {
             yield session.abortTransaction();
@@ -197,7 +189,7 @@ const forgotPasswordIntoDb = (payload) => __awaiter(void 0, void 0, void 0, func
     catch (error) {
         yield session.abortTransaction();
         session.endSession();
-        throw new ApiError_1.default(http_status_1.default.SERVICE_UNAVAILABLE, 'Password change failed', error);
+        throw new ApiError_1.default(http_status_1.default.SERVICE_UNAVAILABLE, 'issues by the send password section', error);
     }
 });
 const verificationForgotUserIntoDb = (otp) => __awaiter(void 0, void 0, void 0, function* () {

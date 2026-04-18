@@ -64,14 +64,9 @@ const UpdateUserProfileSchema = zod_1.z.object({
 });
 const ForgotPasswordSchema = zod_1.z.object({
     body: zod_1.z.object({
-        email: zod_1.z
-            .string({ required_error: 'Email is Required' })
-            .email('Invalid email format')
-            .refine((email) => {
-            return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-        }, {
-            message: 'Invalid email format',
-        }),
+        phoneNumber: zod_1.z
+            .string()
+            .regex(/^\+?[0-9]{10,15}$/, 'Invalid phone number format')
     }),
 });
 const verificationCodeSchema = zod_1.z.object({

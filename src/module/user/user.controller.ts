@@ -38,7 +38,10 @@ const chnagePassword: RequestHandler = catchAsync(async (req, res) => {
 });
 
 const forgotPassword: RequestHandler = catchAsync(async (req, res) => {
+ 
   const result = await UserServices.forgotPasswordIntoDb(req.body);
+
+ 
   sendRespone(res, {
     success: true,
     statusCode: httpStatus.OK,

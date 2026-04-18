@@ -33,4 +33,10 @@ exports.default = {
         aws_bucket_region: process.env.AWS_BUCKET_REGION,
         aws_bucket_name: process.env.AWS_BUCKET_NAME,
     },
+    send_otp: {
+        twilio_account_sid: process.env.TWILIO_ACCOUNT_SID,
+        twilio_auth_token: process.env.TWILIO_AUTH_TOKEN,
+        twilio_phone_number: process.env.TWILIO_PHONE_NUMBER,
+        twilio_verify_sid: process.env.TWILIO_VERIFY_SID
+    }
 };

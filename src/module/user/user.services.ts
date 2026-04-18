@@ -12,6 +12,7 @@ import bcrypt from 'bcrypt';
 import catchError from '../../app/error/catchError';
 import { getSocketIO } from '../../socket/connectSocket';
 import notifications from '../notification/notification.model';
+import twilio_sms_services from '../../utility/SMS/sendOTP';
 
 export const generateUniqueOTP = async (): Promise<number> => {
   const MAX_ATTEMPTS = 10;
@@ -228,25 +229,24 @@ const changePasswordIntoDb = async (
 
 // forgot password
 
-const forgotPasswordIntoDb = async (payload: string | { email: string }) => {
+const forgotPasswordIntoDb = async (payload:{phoneNumber: string}) => {
   const session = await mongoose.startSession();
   session.startTransaction();
 
   try {
-    let emailString: string;
 
-    if (typeof payload === 'string') {
-      emailString = payload;
-    } else if (payload && typeof payload === 'object' && 'email' in payload) {
-      emailString = payload.email;
-    } else {
-      throw new ApiError(httpStatus.BAD_REQUEST, 'Invalid email format', '');
-    }
+
+    const sendOtp = await twilio_sms_services.sendOTP("+8801728911597");
+
+      console.log(sendOtp);
+
+
+
 
     const isExistUser = await users.findOne(
       {
         $and: [
-          { email: emailString },
+          { phoneNumber: payload.phoneNumber },
           { isVerify: true },
           { status: USER_ACCESSIBILITY.isProgress },
           { isDelete: false },
@@ -278,15 +278,9 @@ const forgotPasswordIntoDb = async (payload: string | { email: string }) => {
     }
 
     try {
-      await sendEmail(
-        emailString,
-        emailcontext.sendVerificationData(
-          emailString,
-          otp,
-          ' Forgot Password Email',
-        ),
-        'Forgot Password Verification OTP Code',
-      );
+
+      
+     
     } catch (emailError: any) {
       await session.abortTransaction();
       session.endSession();
@@ -307,12 +301,11 @@ const forgotPasswordIntoDb = async (payload: string | { email: string }) => {
 
     throw new ApiError(
       httpStatus.SERVICE_UNAVAILABLE,
-      'Password change failed',
+      'issues by the send password section',
       error,
     );
   }
 };
-
 
 
 const verificationForgotUserIntoDb = async (

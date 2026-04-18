@@ -80,17 +80,11 @@ const UpdateUserProfileSchema = z.object({
 
 const ForgotPasswordSchema = z.object({
   body: z.object({
-    email: z
-      .string({ required_error: 'Email is Required' })
-      .email('Invalid email format')
-      .refine(
-        (email) => {
-          return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-        },
-        {
-          message: 'Invalid email format',
-        },
-      ),
+     phoneNumber: z
+        .string()
+        .regex(/^\+?[0-9]{10,15}$/, 'Invalid phone number format')
+      
+
   }),
 });
 
