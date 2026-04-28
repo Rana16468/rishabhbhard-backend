@@ -149,99 +149,66 @@ const changePasswordIntoDb = (payload, id) => __awaiter(void 0, void 0, void 0, 
 });
 // forgot password
 const forgotPasswordIntoDb = (payload) => __awaiter(void 0, void 0, void 0, function* () {
-    const session = yield mongoose_1.default.startSession();
-    session.startTransaction();
     try {
-        const sendOtp = yield sendOTP_1.default.sendOTP("+8801728911597");
-        console.log(sendOtp);
+        // 1️⃣ Check user first
         const isExistUser = yield user_model_1.default.findOne({
-            $and: [
-                { phoneNumber: payload.phoneNumber },
-                { isVerify: true },
-                { status: user_constant_1.USER_ACCESSIBILITY.isProgress },
-                { isDelete: false },
-            ],
-        }, { _id: 1, provider: 1 }, { session });
+            phoneNumber: payload.phoneNumber,
+            isVerify: true,
+            status: user_constant_1.USER_ACCESSIBILITY.isProgress,
+            isDelete: false,
+        }, { _id: 1 });
         if (!isExistUser) {
-            throw new ApiError_1.default(http_status_1.default.NOT_FOUND, 'User not found', '');
+            throw new ApiError_1.default(http_status_1.default.NOT_FOUND, "User not found", "");
         }
-        const otp = yield (0, exports.generateUniqueOTP)();
-        const result = yield user_model_1.default.findOneAndUpdate({ _id: isExistUser._id }, { verificationCode: otp }, {
-            new: true,
-            upsert: true,
-            projection: { _id: 1, email: 1 },
-            session,
-        });
-        if (!result) {
-            throw new ApiError_1.default(http_status_1.default.NOT_FOUND, 'OTP forgot section issues', '');
+        // 2️⃣ Send OTP
+        const sendOtp = yield sendOTP_1.default.sendOTP(payload.phoneNumber);
+        if (!sendOtp || sendOtp.status !== "pending") {
+            throw new ApiError_1.default(http_status_1.default.INTERNAL_SERVER_ERROR, "Failed to send OTP", "");
         }
-        try {
-        }
-        catch (emailError) {
-            yield session.abortTransaction();
-            session.endSession();
-            throw new ApiError_1.default(http_status_1.default.SERVICE_UNAVAILABLE, 'Failed to send verification email', emailError);
-        }
-        yield session.commitTransaction();
-        session.endSession();
-        return { status: true, message: 'Checked Your Email' };
+        return {
+            success: true,
+            message: "OTP sent successfully",
+        };
     }
     catch (error) {
-        yield session.abortTransaction();
-        session.endSession();
-        throw new ApiError_1.default(http_status_1.default.SERVICE_UNAVAILABLE, 'issues by the send password section', error);
+        throw new ApiError_1.default(http_status_1.default.SERVICE_UNAVAILABLE, (error === null || error === void 0 ? void 0 : error.message) || "Forgot password failed", error);
     }
 });
-const verificationForgotUserIntoDb = (otp) => __awaiter(void 0, void 0, void 0, function* () {
+const verificationForgotUserIntoDb = (payload) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        let code;
-        if (typeof otp === 'object' && typeof otp.verificationCode === 'number') {
-            code = otp.verificationCode;
-        }
-        else if (typeof otp === 'number') {
-            code = otp;
-        }
-        else {
-            throw new ApiError_1.default(http_status_1.default.BAD_REQUEST, 'Invalid OTP format', '');
-        }
-        const isExistOtp = yield user_model_1.default.findOne({
-            $and: [
-                { verificationCode: code },
-                { isVerify: true },
-                { isDelete: false },
-                { status: user_constant_1.USER_ACCESSIBILITY.isProgress },
-            ],
-        }, { _id: 1, updatedAt: 1, email: 1, role: 1 });
-        if (!isExistOtp) {
-            throw new ApiError_1.default(http_status_1.default.NOT_FOUND, 'OTP not found', '');
-        }
-        // const updatedAt =
-        //   isExistOtp.updatedAt instanceof Date
-        //     ? isExistOtp.updatedAt.getTime()
-        //     : new Date(isExistOtp.updatedAt).getTime();
-        // const now = Date.now();
-        // const FIVE_MINUTES = 5 * 60 * 1000;
-        // if (now - updatedAt > FIVE_MINUTES) {
-        //   throw new ApiError(
-        //     httpStatus.FORBIDDEN,
-        //     'OTP has expired. Please request a new one.',
-        //     '',
-        //   );
+        const { phoneNumber, verificationCode } = payload;
+        // const isVerified = await twilio_sms_services.verifyOTP(
+        //   phoneNumber,
+        //   verificationCode
+        // );
+        // if (!isVerified) {
+        //   throw new ApiError(httpStatus.BAD_REQUEST, "Invalid OTP", "");
         // }
+        // 2️⃣ Find user
+        const isExistOtp = yield user_model_1.default.findOne({
+            phoneNumber,
+            isVerify: true,
+            isDelete: false,
+            status: user_constant_1.USER_ACCESSIBILITY.isProgress,
+        }, { _id: 1, email: 1, role: 1 });
+        if (!isExistOtp) {
+            throw new ApiError_1.default(http_status_1.default.NOT_FOUND, "User not found", "");
+        }
+        // 3️⃣ Generate JWT
         const jwtPayload = {
             id: isExistOtp._id.toString(),
             role: isExistOtp.role,
             email: isExistOtp.email,
         };
         const accessToken = jwtHelpers_1.jwtHelpers.generateToken(jwtPayload, config_1.default.jwt_access_secret, config_1.default.expires_in);
-        yield user_model_1.default.updateOne({ _id: isExistOtp._id }, { $unset: { verificationCode: '' } });
+        // 4️⃣ Cleanup (optional)
+        yield user_model_1.default.updateOne({ _id: isExistOtp._id }, { $unset: { verificationCode: "" } });
         return accessToken;
     }
     catch (error) {
-        if (error instanceof ApiError_1.default) {
+        if (error instanceof ApiError_1.default)
             throw error;
-        }
-        throw new ApiError_1.default(http_status_1.default.SERVICE_UNAVAILABLE, 'Password change failed', error);
+        throw new ApiError_1.default(http_status_1.default.SERVICE_UNAVAILABLE, "OTP verification failed", error);
     }
 });
 const resetPasswordIntoDb = (payload) => __awaiter(void 0, void 0, void 0, function* () {

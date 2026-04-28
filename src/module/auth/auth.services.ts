@@ -17,9 +17,7 @@ import conversationmemorys from "../chatbot/chatbot.model";
 import { deleteFromS3 } from "../../utility/deleteFromS3";
 import { uploadToS3 } from "../../utility/uploadToS3";
 import notifications from "../notification/notification.model";
-import { generateUniqueOTP } from "../user/user.services";
-import sendEmail from "../../utility/sendEmail";
-import emailcontext from "../../utility/emailcontext/sendvarificationData";
+
 
 
 

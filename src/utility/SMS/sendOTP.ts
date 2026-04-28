@@ -4,7 +4,7 @@ import ApiError from "../../app/error/ApiError";
 import httpStatus from "http-status";
 import catchError from "../../app/error/catchError";
 
-const client = twilio(
+export const client = twilio(
   config.send_otp.twilio_account_sid,
   config.send_otp.twilio_auth_token
 );

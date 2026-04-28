@@ -12,18 +12,19 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.client = void 0;
 const twilio_1 = __importDefault(require("twilio"));
 const config_1 = __importDefault(require("../../app/config"));
 const ApiError_1 = __importDefault(require("../../app/error/ApiError"));
 const http_status_1 = __importDefault(require("http-status"));
 const catchError_1 = __importDefault(require("../../app/error/catchError"));
-const client = (0, twilio_1.default)(config_1.default.send_otp.twilio_account_sid, config_1.default.send_otp.twilio_auth_token);
+exports.client = (0, twilio_1.default)(config_1.default.send_otp.twilio_account_sid, config_1.default.send_otp.twilio_auth_token);
 const sendOTP = (phone) => __awaiter(void 0, void 0, void 0, function* () {
     if (!phone || !phone.startsWith("+")) {
         throw new ApiError_1.default(http_status_1.default.BAD_REQUEST, "Phone must be in international format (+880...)", "");
     }
     try {
-        const response = yield client.verify.v2
+        const response = yield exports.client.verify.v2
             .services(config_1.default.send_otp.twilio_verify_sid)
             .verifications.create({
             to: phone,
@@ -41,7 +42,7 @@ const verifyOTP = (phone, code) => __awaiter(void 0, void 0, void 0, function* (
         throw new ApiError_1.default(http_status_1.default.BAD_REQUEST, "Phone and OTP code are required", "");
     }
     try {
-        const response = yield client.verify.v2
+        const response = yield exports.client.verify.v2
             .services(config_1.default.send_otp.twilio_verify_sid)
             .verificationChecks.create({
             to: phone,

@@ -81,18 +81,17 @@ const UpdateUserProfileSchema = z.object({
 const ForgotPasswordSchema = z.object({
   body: z.object({
      phoneNumber: z
-        .string()
-        .regex(/^\+?[0-9]{10,15}$/, 'Invalid phone number format')
-      
-
+        .string({required_error:"phone number is required"})
+  
   }),
 });
 
 const verificationCodeSchema = z.object({
   body: z.object({
+    phoneNumber:z.string({required_error:"phone number is required"}),
     verificationCode: z
       .number({ required_error: ' verificationCode is require' })
-      .min(4, { message: 'min 4  number accepted' }),
+     
   }),
 });
 

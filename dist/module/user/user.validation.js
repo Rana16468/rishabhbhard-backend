@@ -65,15 +65,14 @@ const UpdateUserProfileSchema = zod_1.z.object({
 const ForgotPasswordSchema = zod_1.z.object({
     body: zod_1.z.object({
         phoneNumber: zod_1.z
-            .string()
-            .regex(/^\+?[0-9]{10,15}$/, 'Invalid phone number format')
+            .string({ required_error: "phone number is required" })
     }),
 });
 const verificationCodeSchema = zod_1.z.object({
     body: zod_1.z.object({
+        phoneNumber: zod_1.z.string({ required_error: "phone number is required" }),
         verificationCode: zod_1.z
             .number({ required_error: ' verificationCode is require' })
-            .min(4, { message: 'min 4  number accepted' }),
     }),
 });
 const resetPasswordSchema = zod_1.z.object({
